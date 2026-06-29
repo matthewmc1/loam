@@ -1,0 +1,29 @@
+import type { EventKind } from "../db/types";
+
+/** Dot color for each provenance event kind in the timeline. */
+export const EVENT_COLOR: Record<EventKind, string> = {
+  created: "var(--text-strong)",
+  edited: "var(--text-fainter)",
+  renamed: "var(--text-fainter)",
+  status_changed: "var(--status-review)",
+  type_changed: "var(--text-muted)",
+  verified: "var(--status-verified)",
+  linked: "var(--status-verified-soft)",
+  unlinked: "var(--text-fainter)",
+  tagged: "var(--text-muted)",
+  untagged: "var(--text-fainter)",
+  moved: "var(--text-muted)",
+  source_changed: "var(--text-muted)",
+  confidence_changed: "var(--text-muted)",
+  review_changed: "var(--status-review)",
+  property_changed: "var(--text-muted)",
+  split_from: "var(--status-verified-soft)",
+  derived_from: "var(--status-verified-soft)",
+  clipped_from: "var(--text-muted)",
+  contradiction_flagged: "var(--danger)",
+  contradiction_resolved: "var(--status-verified)",
+  analyzed: "var(--accent-action)",
+  task_created: "var(--status-review)",
+  archived: "var(--text-fainter)",
+  restored: "var(--text-muted)",
+};

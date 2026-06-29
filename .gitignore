@@ -1,0 +1,21 @@
+# dependencies
+node_modules
+node_modules/.tmp
+
+# build output
+dist
+dist-ssr
+.vite
+
+# local env / secrets
+*.local
+.env
+.env.*
+# .mcp.json holds a live Cadence API token — keep it local (see .mcp.json.example)
+.mcp.json
+
+# test / tooling artifacts (Playwright snapshots can capture secrets)
+.playwright-mcp/
+
+# OS
+.DS_Store

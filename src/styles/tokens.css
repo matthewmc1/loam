@@ -1,0 +1,87 @@
+/*
+ * Loam design tokens — extracted from Loam.dc.html, then refined.
+ * A warm, paper-like palette. Geist for prose, JetBrains Mono for metadata/labels.
+ */
+:root {
+  /* Surfaces */
+  --bg-app: #f4f4f1;        /* outermost canvas */
+  --bg-sidebar: #fbfbf9;    /* left rail + inspector */
+  --bg-main: #ffffff;       /* note canvas */
+  --bg-sunken: #fcfcfa;     /* graph canvas, cards */
+  --bg-input: #f1f1ec;      /* search, chips, type-picker track */
+
+  /* Hover / active states */
+  --hover-row: #e6e6df;     /* .rw — list rows (darker than active, so active+hover stays selected) */
+  --hover-prop: #f0f0eb;    /* .pr — property rows */
+  --hover-link: #e4e7de;    /* .lk — inline links */
+  --active-row: #ececE6;    /* selected sidebar item */
+
+  /* Borders */
+  --border: #e7e7e1;        /* structural dividers */
+  --border-subtle: #ededE7; /* in-content hairlines */
+  --border-strong: #d7d7ce;
+
+  /* Text — darkened from the mock for legibility on the light surfaces */
+  --text-strong: #1b1b18;   /* titles, primary */
+  --text-body: #2b2b26;     /* note body */
+  --text-700: #3a3a34;
+  --text-600: #5a5a52;
+  --text-500: #6b6b64;
+  --text-muted: #82827a;    /* secondary copy */
+  --text-faint: #86867d;    /* labels, mono captions */
+  --text-fainter: #9a9a90;  /* timestamps, counts */
+  --text-ghost: #b1b1a8;    /* placeholders, empty states */
+
+  /* Status (note maturity) */
+  --status-verified: #3e9d6e;
+  --status-review: #c0892f;
+  --status-fleeting: #9a9a92;
+  --status-draft: #9a9a92;
+  --status-verified-soft: #3a7a57;
+
+  /* Folder accents (defaults) */
+  --folder-permanent: #3e9d6e;
+  --folder-literature: #6e6e64;
+  --folder-moc: #1b1b18;
+  --folder-fleeting: #c7c7be;
+
+  /* Semantic */
+  --danger: #be4a2f;        /* contradictions, stale claims */
+  --link-bg: #ecefe7;
+  --link-border: #cfd6c5;
+  --selection: #dde3d8;
+  --live: #3e9d6e;          /* sync / live dot */
+
+  /* Inline gauges + action accent */
+  --gauge-track: var(--border);
+  --gauge-high: var(--status-verified);  /* >=66% trusted   */
+  --gauge-mid: var(--status-review);     /* 33-65% provisional */
+  --gauge-low: var(--text-fainter);      /* <33% speculative */
+  --accent-action: var(--status-review); /* "needs your attention" */
+
+  /* Scrollbar */
+  --scrollbar: #cfcfc7;
+  --scrollbar-hover: #b8b8af;
+
+  /* Type */
+  --font-sans: "Geist", -apple-system, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radii */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-btn: 7px;             /* canonical interactive radius */
+  --r-lg: 8px;
+  --r-xl: 12px;
+
+  /* Layout */
+  --sidebar-w: 248px;
+  --inspector-w: 288px;
+  --editor-max: 680px;      /* title + meta width */
+  --measure: 35rem;         /* ~64ch of Geist at 17px — the prose reading column */
+
+  /* Motion */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --live-ghost: rgba(62, 157, 110, 0.16);
+}

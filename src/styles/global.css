@@ -1,0 +1,126 @@
+@import "./tokens.css";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-strong);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+  background-clip: padding-box;
+}
+
+button {
+  font-family: inherit;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover helpers, mirroring the design's .lk / .pr / .rw classes */
+.lk:hover {
+  background: var(--hover-link) !important;
+}
+.pr:hover {
+  background: var(--hover-prop) !important;
+}
+.rw:hover {
+  background: var(--hover-row) !important;
+}
+
+.pulse-dot {
+  animation: pulse 2.8s ease-in-out infinite;
+}
+
+/* per-folder "new note" reveals on hover/focus; stays focusable for keyboard */
+.folder-add {
+  opacity: 0;
+  transition: opacity 0.12s var(--ease);
+}
+.folder-row:hover .folder-add,
+.folder-row:focus-within .folder-add {
+  opacity: 1;
+}
+.folder-row:hover .folder-count,
+.folder-row:focus-within .folder-count {
+  opacity: 0;
+}
+
+/* tag remove (×) reveals on hover/focus */
+.loam-tag .loam-tag-x {
+  opacity: 0;
+  transition: opacity 0.12s var(--ease);
+}
+.loam-tag:hover .loam-tag-x,
+.loam-tag:focus-within .loam-tag-x {
+  opacity: 1;
+}
+
+/* Shared utility: monospace caption/label */
+.mono {
+  font-family: var(--font-mono);
+}
+.uno {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Focus ring for keyboard users only — neutral so it stays legible on every surface */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-strong) 55%, transparent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+button:focus:not(:focus-visible) {
+  outline: none;
+}

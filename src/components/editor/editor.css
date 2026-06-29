@@ -1,0 +1,302 @@
+/* Loam prose — the reading + writing surface for a note body, set like a manuscript. */
+
+.loam-prose {
+  max-width: var(--measure);
+  font-size: 17px;
+  line-height: 1.78;
+  color: var(--text-body);
+  letter-spacing: -0.003em;
+  hanging-punctuation: first last;
+}
+
+.loam-prose .ProseMirror {
+  outline: none;
+  min-height: 240px;
+  caret-color: var(--live);
+}
+.loam-prose .ProseMirror:focus-visible {
+  outline: none;
+}
+.loam-prose .ProseMirror > :first-child {
+  margin-top: 0;
+}
+
+.loam-prose p {
+  margin: 0 0 1.05em;
+  text-wrap: pretty;
+}
+.loam-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.loam-prose h1 {
+  font-size: 1.32em;
+  line-height: 1.22;
+  letter-spacing: -0.018em;
+  margin: 1.9em 0 0.5em;
+  color: var(--text-strong);
+  text-wrap: balance;
+}
+.loam-prose h3 {
+  font-size: 0.95em;
+  font-weight: 600;
+  margin: 1.7em 0 0.4em;
+  color: var(--text-700);
+  text-wrap: balance;
+}
+/* h2 is the note's section label — quiet mono caps with a hairline tick */
+.loam-prose h2 {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  line-height: 1.4;
+  margin: 2.6em 0 1em;
+}
+.loam-prose h2::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 1px;
+  background: var(--border-strong);
+  margin-bottom: 12px;
+}
+.loam-prose .ProseMirror > h2:first-child::before {
+  display: none;
+}
+
+/* hanging pull-quote */
+.loam-prose blockquote {
+  position: relative;
+  border: none;
+  margin: 1.6em 0;
+  padding-left: 1.15em;
+  font-style: italic;
+  font-size: 1.06em;
+  line-height: 1.62;
+  color: var(--text-600);
+  hanging-punctuation: first;
+}
+.loam-prose blockquote::before {
+  content: "\201C";
+  position: absolute;
+  left: -0.32em;
+  top: -0.04em;
+  font-style: normal;
+  font-size: 2.1em;
+  line-height: 1;
+  font-family: var(--font-sans);
+  color: var(--border-strong);
+}
+.loam-prose blockquote p {
+  margin-bottom: 0;
+}
+
+.loam-prose ul,
+.loam-prose ol {
+  margin: 0 0 1.1em;
+  padding: 0;
+  list-style: none;
+}
+.loam-prose li {
+  position: relative;
+  padding-left: 26px;
+  margin-bottom: 8px;
+}
+.loam-prose li > p {
+  margin-bottom: 6px;
+}
+.loam-prose ul > li::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 0.72em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-fainter);
+}
+.loam-prose ol {
+  counter-reset: loam-ol;
+}
+.loam-prose ol > li {
+  counter-increment: loam-ol;
+}
+.loam-prose ol > li::before {
+  content: counter(loam-ol) ".";
+  position: absolute;
+  left: 0;
+  top: 0.1em;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-fainter);
+}
+
+.loam-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: var(--r-sm);
+  color: var(--text-600);
+}
+.loam-prose pre {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin: 0 0 18px;
+  overflow-x: auto;
+}
+.loam-prose pre code {
+  background: none;
+  padding: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-body);
+}
+
+.loam-prose a {
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-decoration-color: var(--link-border);
+  text-underline-offset: 2px;
+}
+.loam-prose strong {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.loam-prose hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 26px 0;
+}
+
+/* placeholder on the empty first line */
+.loam-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--text-ghost);
+}
+
+/* inline wikilink hover easing (matches the link pill) */
+.loam-prose .lk {
+  border-radius: 0.32em;
+  transition: background 0.15s var(--ease);
+}
+.loam-prose .lk:hover {
+  text-decoration: none;
+}
+
+/* --- living-knowledge affordances --- */
+@keyframes sense-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+.loam-sense {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+  flex-shrink: 0;
+}
+.loam-sense::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--live);
+  animation: sense-ripple 2.8s var(--ease) infinite;
+}
+
+/* manuscript spine: warms to living-green only while the note has focus */
+.loam-page {
+  position: relative;
+}
+.loam-page::before {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 52px;
+  bottom: 160px;
+  width: 1px;
+  background: var(--border-subtle);
+  opacity: 0;
+  transition: opacity 0.45s var(--ease), background 0.45s var(--ease);
+}
+.loam-page:focus-within::before {
+  opacity: 1;
+  background: var(--live-ghost);
+}
+.loam-page textarea:focus-visible {
+  outline: none;
+}
+
+/* backlink rows lean toward you + reveal an arrow */
+.loam-backlink {
+  transition: transform 0.18s var(--ease-out);
+}
+.loam-backlink:hover {
+  transform: translateX(3px);
+}
+.loam-backlink .loam-arrow {
+  opacity: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-fainter);
+  transition: opacity 0.18s var(--ease-out);
+}
+.loam-backlink:hover .loam-arrow {
+  opacity: 1;
+}
+
+/* unlinked mentions visibly become links on hover */
+.loam-pending {
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+    color 0.16s var(--ease);
+}
+.loam-pending:hover {
+  background: var(--link-bg);
+  border-color: var(--link-border);
+  color: var(--text-strong);
+}
+.loam-pending .loam-plus {
+  display: inline-block;
+  transition: transform 0.2s var(--ease-out), color 0.2s var(--ease);
+}
+.loam-pending:hover .loam-plus {
+  transform: rotate(90deg);
+  color: var(--status-verified);
+}
+
+/* selection → Cadence task */
+.loam-bubble {
+  background: var(--text-strong);
+  color: var(--bg-main);
+  border: none;
+  border-radius: 7px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  box-shadow: 0 6px 18px -6px rgba(27, 27, 24, 0.32);
+  white-space: nowrap;
+}
+.loam-bubble:hover {
+  opacity: 0.92;
+}

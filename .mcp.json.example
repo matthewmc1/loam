@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "cadence": {
+      "command": "node",
+      "args": ["/absolute/path/to/cadence/mcp/dist/index.js"],
+      "env": {
+        "CADENCE_API_TOKEN": "cdnc_your_token_here",
+        "CADENCE_API_URL": "http://localhost:8088"
+      }
+    }
+  }
+}
