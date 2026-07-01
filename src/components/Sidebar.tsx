@@ -170,7 +170,7 @@ export function Sidebar({ vault }: { vault: Vault }) {
             </div>
           </div>
         )}
-        <CadenceTasks />
+        <CadenceTasks notes={vault.notes} />
       </div>
 
       {/* footer */}

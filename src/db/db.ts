@@ -1,5 +1,6 @@
 import Dexie, { type Table } from "dexie";
-import type { Note, Folder, ProvenanceEvent, Vector } from "./types";
+import type { Note, Folder, ProvenanceEvent, Vector, Dismissal } from "./types";
+import { cadenceDays } from "../lib/time";
 
 /**
  * Loam's local-first store. Everything lives in IndexedDB in the browser —
@@ -11,6 +12,7 @@ export class LoamDB extends Dexie {
   folders!: Table<Folder, string>;
   events!: Table<ProvenanceEvent, string>;
   vectors!: Table<Vector, string>;
+  dismissals!: Table<Dismissal, string>;
 
   constructor() {
     super("loam");
@@ -35,6 +37,28 @@ export class LoamDB extends Dexie {
       events: "id, noteId, ts, kind, [noteId+ts]",
       vectors: "id, model",
     });
+    // v4: the review loop (structured interval, lastReviewedAt, snooze), typed
+    // link metadata, aliases for mention scanning, and persisted dismissals.
+    this.version(4)
+      .stores({
+        notes: "id, zid, title, type, status, folderId, updatedAt, archivedAt, *tags, *links",
+        folders: "id, parentId, order, archivedAt",
+        events: "id, noteId, ts, kind, [noteId+ts]",
+        vectors: "id, model",
+        dismissals: "key",
+      })
+      .upgrade((tx) =>
+        tx
+          .table("notes")
+          .toCollection()
+          .modify((n: Note) => {
+            n.reviewInterval = n.reviewInterval ?? cadenceDays(n.reviewCadence ?? "");
+            n.lastReviewedAt = n.lastReviewedAt ?? null;
+            n.snoozedUntil = n.snoozedUntil ?? null;
+            n.aliases = n.aliases ?? [];
+            n.linkMeta = n.linkMeta ?? [];
+          })
+      );
   }
 }
 

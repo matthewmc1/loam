@@ -45,4 +45,5 @@ export const OLLAMA_URL = "http://localhost:11434";
 /** Similarity thresholds (cosine over normalized embeddings). */
 export const SUGGEST_THRESHOLD = 0.35; // min similarity to suggest a link
 export const EDGE_THRESHOLD = 0.46; // min similarity to draw a graph edge
-export const TOP_K = 6;
+export const TOP_K = 6; // neighbors considered for link suggestions
+export const ASK_TOP_K = 4; // sources retrieved for an Ask answer

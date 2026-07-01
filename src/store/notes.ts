@@ -7,6 +7,8 @@ import type {
   NoteStatus,
   NoteType,
   NoteProperty,
+  LinkType,
+  LinkMeta,
 } from "../db/types";
 import { uid, zid } from "../lib/id";
 import { emptyDoc, docToText, extractTags, type PMNode } from "../lib/doc";
@@ -127,9 +129,14 @@ export async function createNote(input: CreateNoteInput = {}): Promise<string> {
     links: [],
     pendingLinks: [],
     manualLinks: [],
+    linkMeta: [],
+    aliases: [],
     source: input.source ?? (type === "Fleeting" ? "—" : "own"),
     confidence: 0.2,
     reviewCadence: "—",
+    reviewInterval: null,
+    lastReviewedAt: null,
+    snoozedUntil: null,
     createdAt: now,
     updatedAt: now,
     verifiedAt: null,
@@ -262,9 +269,64 @@ export async function setConfidence(id: string, confidence: number): Promise<voi
   await logEvent(id, "confidence_changed", `confidence → ${c.toFixed(2)}`, { coalesce: true });
 }
 
-export async function setReviewCadence(id: string, reviewCadence: string): Promise<void> {
-  await db.notes.update(id, { reviewCadence, updatedAt: Date.now() });
-  await logEvent(id, "review_changed", `review → ${reviewCadence || "—"}`);
+/** Set the spaced-review interval (days). null takes the note off the schedule. */
+export async function setReviewInterval(id: string, days: number | null): Promise<void> {
+  const reviewCadence = days == null ? "—" : `every ${days}d`;
+  await db.notes.update(id, {
+    reviewInterval: days,
+    reviewCadence,
+    snoozedUntil: null,
+    updatedAt: Date.now(),
+  });
+  await logEvent(id, "review_changed", `review → ${reviewCadence}`, {
+    data: { interval: days },
+  });
+}
+
+/** Interval growth on a successful review: doubles, capped at half a year. */
+const REVIEW_GROWTH_CAP = 180;
+
+/**
+ * Mark a note reviewed — distinct from verified. Resets the review clock and
+ * eases the interval out (7 → 14 → 28 … capped), so settled knowledge asks
+ * for attention less and less often.
+ */
+export async function markReviewed(id: string): Promise<void> {
+  const note = await db.notes.get(id);
+  if (!note) return;
+  const now = Date.now();
+  const grown =
+    note.reviewInterval != null
+      ? Math.min(note.reviewInterval * 2, REVIEW_GROWTH_CAP)
+      : null;
+  await db.notes.update(id, {
+    lastReviewedAt: now,
+    snoozedUntil: null,
+    reviewInterval: grown,
+    reviewCadence: grown == null ? note.reviewCadence : `every ${grown}d`,
+    updatedAt: now,
+  });
+  await logEvent(id, "reviewed", grown == null ? "reviewed" : `reviewed — next in ${grown}d`, {
+    data: { from: note.reviewInterval, to: grown },
+  });
+}
+
+/** Push the next review reminder out without marking the note reviewed. */
+export async function snoozeReview(id: string, days = 7): Promise<void> {
+  await db.notes.update(id, {
+    snoozedUntil: Date.now() + days * 86400000,
+    updatedAt: Date.now(),
+  });
+  await logEvent(id, "review_changed", `review snoozed ${days}d`, { data: { snoozeDays: days } });
+}
+
+/** Alternate titles this note answers to (drives unlinked-mention scanning). */
+export async function setAliases(id: string, aliases: string[]): Promise<void> {
+  const clean = aliases.map((a) => a.trim()).filter(Boolean);
+  await db.notes.update(id, { aliases: clean, updatedAt: Date.now() });
+  await logEvent(id, "property_changed", `aliases → ${clean.join(", ") || "—"}`, {
+    coalesce: true,
+  });
 }
 
 export async function moveNote(id: string, folderId: string | null): Promise<void> {
@@ -318,6 +380,7 @@ export async function deleteNoteForever(id: string): Promise<void> {
         text: docToText(doc),
         links: n.links.filter((x) => x !== id),
         manualLinks: n.manualLinks.filter((x) => x !== id),
+        linkMeta: (n.linkMeta ?? []).filter((m) => m.targetId !== id),
       });
     }
   });
@@ -325,17 +388,37 @@ export async function deleteNoteForever(id: string): Promise<void> {
 
 /* -------------------- explicit (suggested) links ------------------------ */
 
-export async function linkNotes(fromId: string, toId: string): Promise<void> {
+export interface LinkOpts {
+  type?: LinkType;
+  rationale?: string;
+  origin?: LinkMeta["origin"];
+}
+
+export async function linkNotes(fromId: string, toId: string, opts: LinkOpts = {}): Promise<void> {
   if (fromId === toId) return;
   const from = await db.notes.get(fromId);
   const to = await db.notes.get(toId);
   if (!from || !to) return;
   if (from.links.includes(toId) || from.manualLinks.includes(toId)) return;
+  const meta: LinkMeta | null = opts.type
+    ? { targetId: toId, type: opts.type, rationale: opts.rationale, origin: opts.origin ?? "user" }
+    : null;
   await db.notes.update(fromId, {
     manualLinks: [...from.manualLinks, toId],
+    linkMeta: meta
+      ? [...(from.linkMeta ?? []).filter((m) => m.targetId !== toId), meta]
+      : from.linkMeta ?? [],
     updatedAt: Date.now(),
   });
-  await logEvent(fromId, "linked", `linked to “${to.title}”`, { relatedNoteId: toId });
+  await logEvent(
+    fromId,
+    "linked",
+    meta ? `linked to “${to.title}” (${meta.type})` : `linked to “${to.title}”`,
+    {
+      relatedNoteId: toId,
+      data: meta ? { type: meta.type, rationale: meta.rationale, origin: meta.origin } : undefined,
+    }
+  );
 }
 
 export async function unlinkNotes(fromId: string, toId: string): Promise<void> {
@@ -345,9 +428,15 @@ export async function unlinkNotes(fromId: string, toId: string): Promise<void> {
   const to = await db.notes.get(toId);
   await db.notes.update(fromId, {
     manualLinks: from.manualLinks.filter((x) => x !== toId),
+    linkMeta: (from.linkMeta ?? []).filter((m) => m.targetId !== toId),
     updatedAt: Date.now(),
   });
   await logEvent(fromId, "unlinked", `unlinked “${to?.title ?? toId}”`, { relatedNoteId: toId });
+}
+
+/** Persist a "don't show this again" for a resurface card / nudge / mention. */
+export async function dismissForever(key: string): Promise<void> {
+  await db.dismissals.put({ key, ts: Date.now() });
 }
 
 /** Resolve contradictions raised by provenance events. */

@@ -95,4 +95,6 @@ export const cadence = {
     (await req<{ tasks: CadenceTask[] }>(cfg, "GET", "/api/v1/tasks"))?.tasks ?? [],
   createTask: (cfg: CadenceConfig, input: CreateTaskInput) =>
     req<CadenceTask>(cfg, "POST", "/api/v1/tasks", input),
+  updateTask: (cfg: CadenceConfig, id: string, patch: Partial<Pick<CadenceTask, "status" | "title" | "note" | "urgent">>) =>
+    req<CadenceTask>(cfg, "PATCH", `/api/v1/tasks/${id}`, patch),
 };

@@ -8,21 +8,25 @@ import {
   activeContradiction,
   outboundIds,
   backlinksOf,
+  linkMetaBetween,
 } from "../store/selectors";
 import { useAi } from "../ai/store";
 import { topNeighbors } from "../ai/vectors";
-import { SUGGEST_THRESHOLD } from "../ai/config";
+import { SUGGEST_THRESHOLD, TOP_K } from "../ai/config";
 import {
   setType,
   setStatus,
   setSource,
   setConfidence,
-  setReviewCadence,
+  setReviewInterval,
+  setAliases,
   setProperties,
   verifyNote,
+  markReviewed,
   moveNote,
   linkNotes,
   unlinkNotes,
+  archiveNote,
   resolveContradiction,
 } from "../store/notes";
 import {
@@ -30,8 +34,10 @@ import {
   STATUS_LABEL,
   NOTE_STATUSES,
   NOTE_TYPES,
+  REVIEW_INTERVALS,
   type Note,
   type NoteProperty,
+  type LinkMeta,
 } from "../db/types";
 import { relativeTime, shortDate } from "../lib/time";
 import { Menu, MenuItem } from "./ui/Menu";
@@ -62,7 +68,7 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
           ...outboundIds(note),
           ...backlinksOf(vault.notes, note.id).map((n) => n.id),
         ]);
-        return topNeighbors(aiVectors, note.id, live, 6, SUGGEST_THRESHOLD)
+        return topNeighbors(aiVectors, note.id, live, TOP_K, SUGGEST_THRESHOLD)
           .filter((n) => !connected.has(n.note.id))
           .slice(0, 3)
           .map((n) => ({ note: n.note, conf: n.score }));
@@ -173,13 +179,47 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
         </PropRow>
 
         <PropRow label="review">
-          <EditableText value={note.reviewCadence} placeholder="—" onCommit={(v) => void setReviewCadence(note.id, v)} />
+          <Menu
+            width={180}
+            trigger={({ toggle }) => (
+              <button style={valueBtn} onClick={toggle} title="Spaced-review cycle">
+                {note.reviewInterval != null ? `every ${note.reviewInterval}d` : "off"}
+              </button>
+            )}
+          >
+            {(close) => (
+              <>
+                <MenuItem active={note.reviewInterval == null} onClick={() => { void setReviewInterval(note.id, null); close(); }}>
+                  Off
+                </MenuItem>
+                {REVIEW_INTERVALS.map((d) => (
+                  <MenuItem key={d} active={d === note.reviewInterval} onClick={() => { void setReviewInterval(note.id, d); close(); }}>
+                    every {d}d
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </Menu>
+        </PropRow>
+
+        <PropRow label="reviewed">
+          <button style={valueBtn} onClick={() => void markReviewed(note.id)} title="Mark reviewed now — resets the review clock">
+            {note.lastReviewedAt ? relativeTime(note.lastReviewedAt) : "—"}
+          </button>
         </PropRow>
 
         <PropRow label="verified">
           <button style={valueBtn} onClick={() => void verifyNote(note.id)} title="Mark verified now">
             {note.verifiedAt ? relativeTime(note.verifiedAt) : "—"}
           </button>
+        </PropRow>
+
+        <PropRow label="aliases">
+          <EditableText
+            value={(note.aliases ?? []).join(", ")}
+            placeholder="—"
+            onCommit={(v) => void setAliases(note.id, v.split(","))}
+          />
         </PropRow>
 
         <PropRow label="created">
@@ -202,6 +242,7 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
             key={c.note.id}
             dir={c.dir}
             note={c.note}
+            meta={linkMetaBetween(note, c.note)}
             removable={c.dir !== "←" && note.manualLinks.includes(c.note.id)}
             onOpen={() => open(c.note.id)}
             onUnlink={() => void unlinkNotes(note.id, c.note.id)}
@@ -243,10 +284,23 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
                 {s.note.title}
               </span>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-fainter)" }}>
-                {Math.round(s.conf * 100)}%
+                {/* only semantic scores are real percentages; the heuristic isn't one */}
+                {isSemantic ? `${Math.round(s.conf * 100)}%` : "related"}
               </span>
             </button>
-            <button style={acceptBtn} title="Link them" onClick={() => void linkNotes(note.id, s.note.id)}>
+            <button
+              style={acceptBtn}
+              title="Link them"
+              onClick={() =>
+                void linkNotes(note.id, s.note.id, {
+                  type: "related",
+                  rationale: isSemantic
+                    ? `${Math.round(s.conf * 100)}% semantic similarity`
+                    : "shared tags / neighbors",
+                  origin: "suggestion",
+                })
+              }
+            >
               Link
             </button>
             <button
@@ -261,7 +315,13 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
       </div>
 
       {/* concepts & relations (Gemma) */}
-      <ConceptsSection note={note} llmReady={aiLlm === "ready"} analyzing={analyzing.has(note.id)} onOpen={open} />
+      <ConceptsSection
+        note={note}
+        llmReady={aiLlm === "ready"}
+        analyzing={analyzing.has(note.id)}
+        connectedIds={connectedIds}
+        onOpen={open}
+      />
 
       {/* provenance */}
       <SectionLabel>
@@ -276,6 +336,18 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
             View full history ({eventCount}) →
           </button>
         )}
+      </div>
+
+      {/* archive — soft-delete; the full history survives */}
+      <div style={{ padding: "0 12px 26px" }}>
+        <button
+          style={archiveBtn}
+          className="rw"
+          title="Hide from the vault — restore anytime from Archive"
+          onClick={() => void archiveNote(note.id)}
+        >
+          Archive note
+        </button>
       </div>
 
       {showHistory && (
@@ -474,11 +546,13 @@ function ConceptsSection({
   note,
   llmReady,
   analyzing,
+  connectedIds,
   onOpen,
 }: {
   note: Note;
   llmReady: boolean;
   analyzing: boolean;
+  connectedIds: Set<string>;
   onOpen: (id: string) => void;
 }) {
   const analyzeNote = useAi((s) => s.analyzeNote);
@@ -499,29 +573,52 @@ function ConceptsSection({
             ))}
           </div>
         )}
-        {relations.map((r, i) => (
-          <button
-            key={i}
-            className="rw"
-            style={relRow}
-            onClick={() => r.targetId && onOpen(r.targetId)}
-            disabled={!r.targetId}
-          >
-            <span style={{ ...relType, color: REL_COLOR[r.type], borderColor: REL_COLOR[r.type] }}>
-              {r.type}
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 12.5, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {r.target}
-              </span>
-              {r.rationale && (
-                <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {r.rationale}
+        {relations.map((r, i) => {
+          const linked = !!r.targetId && connectedIds.has(r.targetId);
+          return (
+            <div key={i} className="rw" style={{ display: "flex", alignItems: "center", borderRadius: 6, paddingRight: 6 }}>
+              <button
+                style={{ ...relRow, flex: 1, minWidth: 0 }}
+                onClick={() => r.targetId && onOpen(r.targetId)}
+                disabled={!r.targetId}
+              >
+                <span style={{ ...relType, color: REL_COLOR[r.type], borderColor: REL_COLOR[r.type] }}>
+                  {r.type}
                 </span>
-              )}
-            </span>
-          </button>
-        ))}
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 12.5, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.target}
+                  </span>
+                  {r.rationale && (
+                    <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {r.rationale}
+                    </span>
+                  )}
+                </span>
+              </button>
+              {/* accepting a relation persists it as a typed link — the AI's
+                  rationale becomes part of the vault's memory, not just display */}
+              {r.targetId &&
+                (linked ? (
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--status-verified-soft)", flexShrink: 0 }}>✓</span>
+                ) : (
+                  <button
+                    style={acceptBtn}
+                    title={`Link as “${r.type}”`}
+                    onClick={() =>
+                      void linkNotes(note.id, r.targetId!, {
+                        type: r.type,
+                        rationale: r.rationale,
+                        origin: "ai",
+                      })
+                    }
+                  >
+                    Link
+                  </button>
+                ))}
+            </div>
+          );
+        })}
         {concepts.length === 0 && relations.length === 0 && (
           <Hint>{note.aiAnalyzedAt ? "No concepts found." : "Not analyzed yet."}</Hint>
         )}
@@ -565,12 +662,14 @@ function Hint({ children }: { children: React.ReactNode }) {
 function ConnRow({
   dir,
   note,
+  meta,
   removable,
   onOpen,
   onUnlink,
 }: {
   dir: "→" | "←" | "↔";
   note: Note;
+  meta?: LinkMeta;
   removable: boolean;
   onOpen: () => void;
   onUnlink: () => void;
@@ -578,7 +677,7 @@ function ConnRow({
   const dirTitle = dir === "↔" ? "Mutual link" : dir === "→" ? "Links out to" : "Links in from";
   return (
     <div className="rw" style={connRow}>
-      <button style={connMain} onClick={onOpen}>
+      <button style={connMain} onClick={onOpen} title={meta?.rationale}>
         <span
           title={dirTitle}
           style={{
@@ -595,6 +694,11 @@ function ConnRow({
         <span style={{ flex: 1, fontSize: 12.5, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {note.title}
         </span>
+        {meta && meta.type !== "related" && (
+          <span style={{ ...relType, color: REL_COLOR[meta.type], borderColor: REL_COLOR[meta.type] }}>
+            {meta.type}
+          </span>
+        )}
       </button>
       {removable && (
         <button style={dismissX} title="Unlink" onClick={onUnlink}>
@@ -912,6 +1016,17 @@ const addLinkInput: React.CSSProperties = {
   fontSize: 12.5,
   fontFamily: "var(--font-sans)",
   color: "var(--text-body)",
+};
+const archiveBtn: React.CSSProperties = {
+  width: "100%",
+  border: "1px dashed var(--border-strong)",
+  background: "none",
+  color: "var(--text-faint)",
+  borderRadius: 8,
+  padding: "7px 10px",
+  fontSize: 11.5,
+  cursor: "pointer",
+  fontFamily: "var(--font-sans)",
 };
 const historyBtn: React.CSSProperties = {
   marginTop: 8,

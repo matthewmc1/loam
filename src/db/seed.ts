@@ -10,6 +10,7 @@ import type {
 import { DEFAULT_FOLDER_COLOR } from "./types";
 import type { PMNode } from "../lib/doc";
 import { docToText } from "../lib/doc";
+import { cadenceDays } from "../lib/time";
 
 /* ----------------------------- seed source ------------------------------ */
 
@@ -481,11 +482,12 @@ export function seedIfEmpty(): Promise<void> {
 
 /** Wipe every table and reseed from the sample data. Destructive. */
 export async function resetVault(): Promise<void> {
-  await db.transaction("rw", db.folders, db.notes, db.events, db.vectors, async () => {
+  await db.transaction("rw", db.folders, db.notes, db.events, db.vectors, db.dismissals, async () => {
     await db.notes.clear();
     await db.folders.clear();
     await db.events.clear();
     await db.vectors.clear();
+    await db.dismissals.clear();
   });
   // clear any persisted AI flags so the fresh vault starts clean
   try {
@@ -539,9 +541,14 @@ async function doSeed(): Promise<void> {
       links: s.out,
       pendingLinks: [],
       manualLinks: [],
+      linkMeta: [],
+      aliases: [],
       source: s.source,
       confidence: s.conf,
       reviewCadence: s.review,
+      reviewInterval: cadenceDays(s.review),
+      lastReviewedAt: null,
+      snoozedUntil: null,
       createdAt,
       updatedAt,
       verifiedAt,

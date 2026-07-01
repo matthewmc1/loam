@@ -16,6 +16,7 @@ export const EVENT_COLOR: Record<EventKind, string> = {
   source_changed: "var(--text-muted)",
   confidence_changed: "var(--text-muted)",
   review_changed: "var(--status-review)",
+  reviewed: "var(--status-verified-soft)",
   property_changed: "var(--text-muted)",
   split_from: "var(--status-verified-soft)",
   derived_from: "var(--status-verified-soft)",
@@ -24,6 +25,7 @@ export const EVENT_COLOR: Record<EventKind, string> = {
   contradiction_resolved: "var(--status-verified)",
   analyzed: "var(--accent-action)",
   task_created: "var(--status-review)",
+  task_completed: "var(--status-verified)",
   archived: "var(--text-fainter)",
   restored: "var(--text-muted)",
 };

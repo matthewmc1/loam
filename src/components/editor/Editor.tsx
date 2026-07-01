@@ -7,6 +7,7 @@ import type { Note } from "../../db/types";
 import { STATUS_COLOR } from "../../db/types";
 import { saveDoc, logEvent } from "../../store/notes";
 import { useCadence } from "../../cadence/store";
+import { loamNoteUrl } from "../../cadence/config";
 import type { PMNode } from "../../lib/doc";
 import { WikiLink, Tag } from "./extensions";
 import { makeSuggestion } from "./suggestion";
@@ -79,7 +80,7 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
       title,
       status: "backlog",
       note: `From Loam note “${note.title}”`,
-      links: [{ label: note.title, url: `loam://note/${note.id}` }],
+      links: [{ label: note.title, url: loamNoteUrl(note.id) }],
     });
     if (task) {
       void logEvent(note.id, "task_created", `task created in Cadence: “${title}”`, {

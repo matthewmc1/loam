@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Vault } from "../store/vault";
+import { useDismissals } from "../store/vault";
 import { useUI } from "../store/ui";
-import { backlinksOf, outboundIds } from "../store/selectors";
+import { backlinksOf, outboundIds, unlinkedMentions } from "../store/selectors";
 import {
   renameNote,
   setStatus,
@@ -10,7 +11,12 @@ import {
   createNote,
   addTag,
   removeTag,
+  linkNotes,
+  dismissForever,
+  logEvent,
 } from "../store/notes";
+import { useCadence } from "../cadence/store";
+import { STAGES, STAGE_LABEL, taskNoteId, type CadenceStatus } from "../cadence/config";
 import {
   STATUS_COLOR,
   STATUS_LABEL,
@@ -18,7 +24,7 @@ import {
   NOTE_TYPES,
   type Note,
 } from "../db/types";
-import { relativeTime, shortDate, cadenceDays, daysSince } from "../lib/time";
+import { relativeTime, shortDate, daysSince } from "../lib/time";
 import { InspectorIcon, CheckIcon } from "./icons";
 import { Menu, MenuItem } from "./ui/Menu";
 import { Editor } from "./editor/Editor";
@@ -99,6 +105,11 @@ export function NoteView({ vault, noteId }: { vault: Vault; noteId: string | nul
             {note.pendingLinks.length > 0 && (
               <PendingLinks note={note} />
             )}
+
+            <Mentions note={note} vault={vault} />
+
+            <NoteTasks note={note} />
+
 
             {/* backlinks */}
             <div style={backlinkWrap}>
@@ -326,9 +337,10 @@ function MetaRow({
 }) {
   const needsVerify = note.status !== "verified" && note.status !== "fleeting";
   const conf = Math.round(note.confidence * 100);
-  const cadence = cadenceDays(note.reviewCadence);
-  const stale =
-    note.verifiedAt != null && cadence != null && daysSince(note.verifiedAt) > cadence;
+  const cadence = note.reviewInterval;
+  // the review clock anchors on whichever came last: reviewed or verified
+  const anchor = Math.max(note.lastReviewedAt ?? 0, note.verifiedAt ?? 0) || null;
+  const stale = anchor != null && cadence != null && daysSince(anchor) > cadence;
   return (
     <div style={metaRow}>
       <Menu
@@ -412,10 +424,10 @@ function PendingLinks({ note }: { note: Note }) {
   return (
     <div style={pendingWrap}>
       <div className="uno" style={{ marginBottom: 4 }}>
-        Unlinked mentions · {note.pendingLinks.length}
+        Pending links · {note.pendingLinks.length}
       </div>
       <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
-        Mentioned here but not yet notes themselves — create them to compound the graph.
+        [[Linked]] here but not yet notes themselves — create them to compound the graph.
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {note.pendingLinks.map((title) => (
@@ -436,6 +448,159 @@ function PendingLinks({ note }: { note: Note }) {
             <span className="loam-plus" style={{ color: "var(--text-muted)", fontWeight: 600 }}>+</span>
             {title}
           </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ note tasks ------------------------------- */
+
+const STAGE_COLOR: Record<CadenceStatus, string> = Object.fromEntries(
+  STAGES.map((s) => [s.status, s.color])
+) as Record<CadenceStatus, string>;
+
+/**
+ * The Cadence tasks born from this note (matched by their loam:// back-link),
+ * with live status — and completable without leaving the note. Completion is
+ * written back to the note's provenance, closing the thinking→doing loop.
+ */
+function NoteTasks({ note }: { note: Note }) {
+  const status = useCadence((s) => s.status);
+  const tasks = useCadence((s) => s.tasks);
+  const setTaskStatus = useCadence((s) => s.setTaskStatus);
+
+  if (status !== "connected") return null;
+  const mine = tasks.filter((t) => taskNoteId(t) === note.id);
+  if (mine.length === 0) return null;
+  const open = mine.filter((t) => t.status !== "done").length;
+
+  const complete = async (t: (typeof mine)[number]) => {
+    const done = await setTaskStatus(t.id, "done");
+    if (done)
+      void logEvent(note.id, "task_completed", `task completed in Cadence: “${t.title}”`, {
+        data: { taskId: t.id },
+      });
+  };
+
+  return (
+    <div style={{ ...pendingWrap, borderLeft: "2px solid var(--status-review)" }}>
+      <div className="uno" style={{ marginBottom: 4 }}>
+        Tasks from this note · {open > 0 ? `${open} open` : "all done"}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
+        Work this thinking spawned — tracked in Cadence, completable from here.
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {mine.map((t) => {
+          const done = t.status === "done";
+          return (
+            <div key={t.id} className="rw" style={mentionRow} title={t.note || t.title}>
+              <button
+                style={{ ...taskCheck, ...(done ? taskCheckDone : {}) }}
+                title={done ? "Done" : "Mark done in Cadence"}
+                disabled={done}
+                onClick={() => void complete(t)}
+              >
+                {done ? "✓" : ""}
+              </button>
+              <span
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontSize: 13.5,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textDecoration: done ? "line-through" : "none",
+                  color: done ? "var(--text-faint)" : "var(--text-body)",
+                }}
+              >
+                {t.title}
+              </span>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10.5,
+                  color: "var(--text-faint)",
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: STAGE_COLOR[t.status] }} />
+                {STAGE_LABEL[t.status]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- unlinked mentions -------------------------- */
+
+const mentionKey = (a: string, b: string) => "mention_" + [a, b].sort().join("_");
+
+/**
+ * Plain-text mentions of this note's title/aliases in other notes' prose
+ * (and vice versa) that aren't linked yet — one click wires them up.
+ */
+function Mentions({ note, vault }: { note: Note; vault: Vault }) {
+  const dismissed = useDismissals();
+  const mentions = useMemo(
+    () => unlinkedMentions(vault.notes, note),
+    [vault.notes, note]
+  ).filter((m) => !dismissed.has(mentionKey(note.id, m.note.id)));
+
+  if (mentions.length === 0) return null;
+
+  return (
+    <div style={{ ...pendingWrap, borderLeft: "2px solid var(--status-verified-soft)" }}>
+      <div className="uno" style={{ marginBottom: 4 }}>
+        Unlinked mentions · {mentions.length}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
+        Named in prose without a link — connect them so old notes keep finding new ones.
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {mentions.map((m) => (
+          <div key={m.note.id} className="rw" style={mentionRow}>
+            <span
+              title={m.dir === "in" ? `“${m.note.title}” mentions this note` : `This note mentions “${m.note.title}”`}
+              style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-fainter)", width: 14, flexShrink: 0 }}
+            >
+              {m.dir === "in" ? "←" : "→"}
+            </span>
+            <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 500, color: "var(--text-body)" }}>{m.note.title}</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {m.snippet}
+              </span>
+            </span>
+            <button
+              style={mentionLinkBtn}
+              title="Create the link"
+              onClick={() => {
+                const rationale =
+                  m.dir === "in" ? `mentions “${note.title}”` : `mentions “${m.note.title}”`;
+                void (m.dir === "in"
+                  ? linkNotes(m.note.id, note.id, { type: "related", rationale, origin: "mention" })
+                  : linkNotes(note.id, m.note.id, { type: "related", rationale, origin: "mention" }));
+              }}
+            >
+              Link
+            </button>
+            <button
+              style={mentionDismissBtn}
+              title="Not related — don't suggest again"
+              onClick={() => void dismissForever(mentionKey(note.id, m.note.id))}
+            >
+              ×
+            </button>
+          </div>
         ))}
       </div>
     </div>
@@ -666,6 +831,53 @@ const pendingChip: React.CSSProperties = {
   borderRadius: 7,
   padding: "6px 11px",
   cursor: "pointer",
+};
+const taskCheck: React.CSSProperties = {
+  width: 16,
+  height: 16,
+  flexShrink: 0,
+  border: "1.5px solid var(--border-strong)",
+  background: "var(--bg-main)",
+  borderRadius: 5,
+  cursor: "pointer",
+  fontSize: 10,
+  lineHeight: 1,
+  color: "var(--bg-main)",
+  padding: 0,
+};
+const taskCheckDone: React.CSSProperties = {
+  background: "var(--status-verified)",
+  borderColor: "var(--status-verified)",
+  cursor: "default",
+};
+const mentionRow: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "7px 8px",
+  borderRadius: 7,
+};
+const mentionLinkBtn: React.CSSProperties = {
+  border: "1px solid var(--border)",
+  background: "var(--bg-main)",
+  cursor: "pointer",
+  borderRadius: 6,
+  padding: "3px 9px",
+  fontSize: 11.5,
+  fontWeight: 500,
+  color: "var(--text-600)",
+  fontFamily: "var(--font-sans)",
+  flexShrink: 0,
+};
+const mentionDismissBtn: React.CSSProperties = {
+  border: "none",
+  background: "none",
+  cursor: "pointer",
+  color: "var(--text-fainter)",
+  fontSize: 14,
+  lineHeight: 1,
+  padding: "0 2px",
+  flexShrink: 0,
 };
 const empty: React.CSSProperties = {
   flex: 1,

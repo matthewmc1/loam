@@ -45,6 +45,28 @@ export interface NoteProperty {
   value: string;
 }
 
+/** How two linked notes relate. Same vocabulary the local model proposes. */
+export type LinkType = "supports" | "contradicts" | "extends" | "refines" | "related";
+
+export const LINK_TYPES: LinkType[] = ["supports", "contradicts", "extends", "refines", "related"];
+
+/**
+ * The "why" behind a manual link — kept so future-you knows what the
+ * connection meant, not just that it exists.
+ */
+export interface LinkMeta {
+  /** target note id (an entry in `manualLinks`) */
+  targetId: string;
+  type: LinkType;
+  /** one-line reason these two connect */
+  rationale?: string;
+  /** where the link came from */
+  origin: "user" | "ai" | "suggestion" | "resurface" | "mention";
+}
+
+/** Preset spaced-review intervals offered in the inspector, in days. */
+export const REVIEW_INTERVALS = [7, 30, 90, 180] as const;
+
 export interface Note {
   id: string;
   /** Zettelkasten timestamp id, e.g. 202606281521 — stable, human-meaningful. */
@@ -69,13 +91,23 @@ export interface Note {
   pendingLinks: string[];
   /** Links accepted from suggestions / "link them", not present in the prose. */
   manualLinks: string[];
+  /** Relation type + rationale for links in `manualLinks` that carry one. */
+  linkMeta: LinkMeta[];
+  /** Alternate titles this note answers to — used for unlinked-mention scanning. */
+  aliases: string[];
 
   /** Where the knowledge came from: a book, an interview, a feed clipping, own. */
   source: string;
   /** 0..1 — how much you trust this note right now. */
   confidence: number;
-  /** Spaced-review cadence, e.g. "every 30d" or "—". */
+  /** Spaced-review cadence, e.g. "every 30d" or "—". Display mirror of `reviewInterval`. */
   reviewCadence: string;
+  /** Days between reviews. null = not on a review schedule. Source of truth. */
+  reviewInterval: number | null;
+  /** When the note was last marked reviewed (distinct from verified). */
+  lastReviewedAt: number | null;
+  /** Review reminders suppressed until this time (set by Snooze). */
+  snoozedUntil: number | null;
 
   createdAt: number;
   updatedAt: number;
@@ -140,6 +172,7 @@ export type EventKind =
   | "source_changed"
   | "confidence_changed"
   | "review_changed"
+  | "reviewed"
   | "property_changed"
   | "split_from"
   | "derived_from"
@@ -148,6 +181,7 @@ export type EventKind =
   | "contradiction_resolved"
   | "analyzed"
   | "task_created"
+  | "task_completed"
   | "archived"
   | "restored";
 
@@ -162,6 +196,16 @@ export interface ProvenanceEvent {
   relatedNoteId?: string;
   /** Structured payload for richer rendering / future audit. */
   data?: Record<string, unknown>;
+}
+
+/**
+ * A persisted "don't show me this again" for resurface cards, suggestion rows
+ * and health nudges — so dismissals survive reload instead of nagging.
+ */
+export interface Dismissal {
+  /** stable key, e.g. "sugg_<a>_<b>", "mention_<a>_<b>", "nudge_promote_<id>" */
+  key: string;
+  ts: number;
 }
 
 /** The view currently shown in <main>. */

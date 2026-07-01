@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { Vault } from "../../store/vault";
 import { useUI } from "../../store/ui";
 import { useAi } from "../../ai/store";
 import { embedder } from "../../ai/embeddings";
 import { chat } from "../../ai/llm";
 import { cosine } from "../../ai/vectors";
+import { ASK_TOP_K } from "../../ai/config";
 import { liveNotes, activeContradiction } from "../../store/selectors";
 import { STATUS_COLOR, type Note } from "../../db/types";
 
@@ -31,25 +32,8 @@ export function AskView({ vault }: { vault: Vault }) {
   const notes = liveNotes(vault.notes);
   const [input, setInput] = useState("");
 
-  const initial = useMemo<Exchange[]>(() => {
-    const ids = ["compound", "moat", "activation"];
-    const picked = ids.map((id) => notes.find((n) => n.id === id)).filter((n): n is Note => !!n);
-    if (picked.length === 0) return [];
-    return [
-      {
-        q: "What's my core thesis on why knowledge compounds, and what part of it is unverified?",
-        answer: [
-          "Your thesis is that value lives in density, not volume: a note matters in proportion to how many others it touches. “Knowledge compounds with density” is the spine, and it grounds the switching-cost moat — accumulated links are what a team can't carry out the door.",
-          "The unverified part: the moat note assumes competitors can't fund an enterprise push, but a live signal says Northwind raised $40M. That claim needs a pass.",
-        ],
-        sources: picked.map((n) => ({ note: n, flag: flagFor(n, vault) })),
-      },
-    ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes.length]);
-
   const [history, setHistory] = useState<Exchange[]>([]);
-  const exchanges = [...initial, ...history];
+  const exchanges = history;
 
   const aiEmbed = useAi((s) => s.embed);
   const aiLlm = useAi((s) => s.llm);
@@ -71,7 +55,7 @@ export function AskView({ vault }: { vault: Vault }) {
           .filter((n) => aiVectors.has(n.id))
           .map((n) => ({ note: n, s: cosine(qv, aiVectors.get(n.id)!) }))
           .sort((a, b) => b.s - a.s)
-          .slice(0, 4)
+          .slice(0, ASK_TOP_K)
           .map((r) => ({ note: r.note, flag: flagFor(r.note, vault) }));
       } else {
         sources = synthesize(q, notes, vault).sources;
@@ -218,7 +202,7 @@ function synthesize(q: string, notes: Note[], vault: Vault): Exchange {
     })
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+    .slice(0, ASK_TOP_K);
 
   if (scored.length === 0) {
     return {

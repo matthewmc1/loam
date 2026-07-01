@@ -1,19 +1,24 @@
 import { useState } from "react";
 import { useCadence } from "../cadence/store";
-import { STAGES } from "../cadence/config";
+import { STAGES, taskNoteId } from "../cadence/config";
+import { useUI } from "../store/ui";
+import type { Note } from "../db/types";
 import { CadenceIcon, CaretIcon } from "./icons";
 
 const PER_STAGE = 6;
 
 /** Cadence tasks grouped by stage, shown in the sidebar. */
-export function CadenceTasks() {
+export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
   const status = useCadence((s) => s.status);
   const tasks = useCadence((s) => s.tasks);
   const setPanel = useCadence((s) => s.setPanel);
   const refresh = useCadence((s) => s.refresh);
+  const { open: openNote } = useUI();
   const [open, setOpen] = useState(true);
 
   const connected = status === "connected";
+  // tasks point back at their source note via a loam:// link
+  const noteById = new Map(notes.filter((n) => !n.archivedAt).map((n) => [n.id, n]));
 
   return (
     <div style={{ marginTop: 10, borderTop: "1px solid var(--border-subtle)", paddingTop: 8 }}>
@@ -54,23 +59,37 @@ export function CadenceTasks() {
                     <span style={{ flex: 1 }}>{st.label}</span>
                     <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-fainter)" }}>{items.length}</span>
                   </div>
-                  {items.slice(0, PER_STAGE).map((t) => (
-                    <div key={t.id} style={taskRow} title={t.note || t.title}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: st.color, flexShrink: 0, opacity: t.status === "done" ? 0.5 : 1 }} />
-                      <span
-                        style={{
-                          flex: 1,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          textDecoration: t.status === "done" ? "line-through" : "none",
-                          color: t.status === "done" ? "var(--text-faint)" : "var(--text-600)",
-                        }}
-                      >
-                        {t.title}
-                      </span>
-                    </div>
-                  ))}
+                  {items.slice(0, PER_STAGE).map((t) => {
+                    const src = noteById.get(taskNoteId(t) ?? "");
+                    return (
+                      <div key={t.id} style={{ ...taskRow, flexWrap: "wrap" }} title={t.note || t.title}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: st.color, flexShrink: 0, opacity: t.status === "done" ? 0.5 : 1 }} />
+                        <span
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textDecoration: t.status === "done" ? "line-through" : "none",
+                            color: t.status === "done" ? "var(--text-faint)" : "var(--text-600)",
+                          }}
+                        >
+                          {t.title}
+                        </span>
+                        {src && (
+                          <button
+                            className="rw"
+                            style={srcChip}
+                            title={`From note “${src.title}” — open it`}
+                            onClick={() => openNote(src.id)}
+                          >
+                            ↗ {src.title.length > 22 ? src.title.slice(0, 21) + "…" : src.title}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                   {items.length > PER_STAGE && (
                     <div style={{ ...taskRow, color: "var(--text-fainter)", paddingLeft: 21 }}>
                       +{items.length - PER_STAGE} more
@@ -151,6 +170,18 @@ const stageHead: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
   color: "var(--text-600)",
+};
+const srcChip: React.CSSProperties = {
+  flexBasis: "100%",
+  marginLeft: 13,
+  textAlign: "left",
+  border: "none",
+  background: "none",
+  cursor: "pointer",
+  padding: "1px 0 0",
+  fontFamily: "var(--font-mono)",
+  fontSize: 10,
+  color: "var(--text-fainter)",
 };
 const taskRow: React.CSSProperties = {
   display: "flex",

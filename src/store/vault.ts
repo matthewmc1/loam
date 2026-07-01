@@ -41,6 +41,12 @@ export function useNoteEvents(noteId: string | null, limit?: number): Provenance
   return events ?? [];
 }
 
+/** Persisted "don't show again" keys for resurface cards, nudges, mentions. */
+export function useDismissals(): Set<string> {
+  const keys = useLiveQuery(async () => (await db.dismissals.toArray()).map((d) => d.key), []);
+  return new Set(keys ?? []);
+}
+
 /** Total number of provenance events for a note (cheap count, reactive). */
 export function useEventCount(noteId: string | null): number {
   const count = useLiveQuery(async () => {

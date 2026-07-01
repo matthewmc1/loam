@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { cadence, type CadenceTask, type CadenceUser, type CreateTaskInput } from "./client";
-import { CADENCE_DEFAULT_URL, LS_URL, LS_TOKEN } from "./config";
+import { CADENCE_DEFAULT_URL, LS_URL, LS_TOKEN, type CadenceStatus } from "./config";
 
 type ConnState = "off" | "checking" | "connected" | "error";
 
@@ -27,6 +27,7 @@ interface CadenceState {
   connect(): Promise<void>;
   refresh(): Promise<void>;
   createTask(input: CreateTaskInput): Promise<CadenceTask | null>;
+  setTaskStatus(id: string, status: CadenceStatus): Promise<CadenceTask | null>;
 }
 
 export const useCadence = create<CadenceState>((set, get) => ({
@@ -94,6 +95,22 @@ export const useCadence = create<CadenceState>((set, get) => ({
         return null;
       }
       set({ tasks: [task, ...get().tasks], msg: "" });
+      return task;
+    } catch (e) {
+      set({ msg: (e as Error).message });
+      return null;
+    }
+  },
+
+  setTaskStatus: async (id, status) => {
+    const { url, token } = get();
+    try {
+      const task = await cadence.updateTask({ url, token }, id, { status });
+      if (!task || !task.id) {
+        set({ msg: "Cadence returned an unexpected response." });
+        return null;
+      }
+      set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)), msg: "" });
       return task;
     } catch (e) {
       set({ msg: (e as Error).message });

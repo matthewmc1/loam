@@ -28,3 +28,17 @@ export const STAGE_LABEL: Record<CadenceStatus, string> = {
   backlog: "Backlog",
   done: "Done",
 };
+
+/** The URL scheme a Cadence task uses to point back at its source note. */
+export function loamNoteUrl(noteId: string): string {
+  return `loam://note/${noteId}`;
+}
+
+/** The source-note id a task links back to, if any. */
+export function taskNoteId(task: { links?: { url: string }[] }): string | null {
+  for (const l of task.links ?? []) {
+    const m = /^loam:\/\/note\/(.+)$/.exec(l.url);
+    if (m) return m[1];
+  }
+  return null;
+}

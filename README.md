@@ -26,14 +26,26 @@ Everything lives on your device (IndexedDB). No account, no server, no sync-to-c
   `[[wikilinks]]` + `#tags` with live autocomplete. Links that don't resolve yet
   become "unlinked mentions" you can turn into notes in one click.
 - **Metadata you can edit** in the inspector: type, status, source, confidence,
-  review cadence, verified/created dates, the Zettelkasten id, and arbitrary custom
-  properties. Every edit is logged to provenance.
+  review interval, verified/reviewed dates, aliases, the Zettelkasten id, and
+  arbitrary custom properties. Every edit is logged to provenance.
 - **Folders** — nestable, colored, user-created — for organizing the vault, with
   per-folder note counts and quick-create.
-- **Connections & backlinks** computed live; accept AI-suggested links, and resolve
-  flagged contradictions.
-- **Resurface** — contradictions, notes due for spaced review, and the strongest
-  unconnected pair worth linking.
+- **Connections & backlinks** computed live — and **typed**: links can carry a
+  relation (*supports / contradicts / extends / refines*) and a one-line rationale,
+  so future-you knows *why* two notes connect, not just that they do. Accepting an
+  AI-proposed relation persists its type and rationale into the link graph.
+- **Unlinked mentions** — Loam scans prose for other notes' titles and aliases
+  typed *without* `[[brackets]]`, in both directions, and offers one-click linking.
+  Old notes keep discovering new ones as the vault grows.
+- **A real review loop** — notes carry a review interval (7/30/90/180d); **Mark
+  reviewed** resets the clock and doubles the interval (capped at 180d), so settled
+  knowledge asks for attention less and less. Snooze pushes a reminder out a week.
+  Reviewing is distinct from verifying.
+- **Resurface** — contradictions, notes due for review (mature notes first), the
+  strongest unconnected pair (semantic when embeddings exist, with an honest
+  explanation of the evidence), plus **vault health**: fleeting notes that earned
+  promotion to Permanent, dead weight worth archiving, and tag clusters missing a
+  Map of Content. Dismissals persist.
 - **Ask** — semantic retrieval across your notes (local embeddings) synthesized by a
   local LLM, with cited sources.
 - **Graph** — force-directed view of the link graph (node size = inbound links),
@@ -108,10 +120,14 @@ loop between thinking and doing.
   (`cdnc_…` — mint one in Cadence under *account menu → API tokens*), and the URL
   (`http://localhost:8088`). The connection persists locally and reconnects on launch.
 - Your Cadence tasks appear in the sidebar **grouped by stage** (Backlog · This week ·
-  In focus · Done).
+  In focus · Done). Tasks born from a note show a **↗ source-note chip** — one click
+  jumps to the thinking that spawned the work.
 - **Select any text in a note → "→ Cadence task"** to create a task from it. The task
   links back to the source note (`loam://note/<id>`), and a `task_created` event is
   written to the note's provenance.
+- Every note shows a **"Tasks from this note"** section with live stage status, and
+  tasks are **completable right there** — completion updates Cadence and writes a
+  `task_completed` event to the note's provenance, closing the thinking → doing loop.
 
 Loam talks to Cadence over its REST API (`/api/v1/*`, Bearer token) — the same API the
 Cadence web app uses, scoped to your tenant by the token.
@@ -163,4 +179,5 @@ provenance.
   YAML frontmatter)
 - Drag-to-reorder / drag-to-move in the folder tree
 - Graph focus mode and time-scrubbing of how the graph grew
-- Two-way Cadence sync (reflect task completion back onto linked notes)
+- Push Cadence-side completions into note provenance live (WebSocket), not just
+  when completed from Loam
