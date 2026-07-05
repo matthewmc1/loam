@@ -39,6 +39,7 @@ export interface CreateTaskInput {
   kind?: string;
   note?: string;
   urgent?: boolean;
+  important?: boolean;
   deadline?: string | null;
   links?: CadenceLink[];
 }

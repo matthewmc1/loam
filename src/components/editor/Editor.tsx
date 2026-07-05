@@ -76,11 +76,17 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
       return;
     }
     const title = text.length > 120 ? text.slice(0, 117) + "…" : text;
+    // Permanent notes and Maps of Content are settled, load-bearing thinking —
+    // carry that maturity across the bridge so Cadence's importance axis + deep
+    // lane defend it. (note.confidence is also available here for future tuning.)
+    const deep = note.type === "Permanent" || note.type === "Map of Content";
+    const label = deep ? `${note.type} · ${note.title}` : note.title;
     const task = await cad.createTask({
       title,
       status: "backlog",
       note: `From Loam note “${note.title}”`,
-      links: [{ label: note.title, url: loamNoteUrl(note.id) }],
+      links: [{ label, url: loamNoteUrl(note.id) }],
+      ...(deep ? { important: true, kind: "deep" } : {}),
     });
     if (task) {
       void logEvent(note.id, "task_created", `task created in Cadence: “${title}”`, {
