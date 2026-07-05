@@ -1,5 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import type { Note, Folder, ProvenanceEvent, Vector, Dismissal } from "./types";
+import type { OutboxOp } from "../cadence/outbox";
 import { cadenceDays } from "../lib/time";
 
 /**
@@ -13,6 +14,7 @@ export class LoamDB extends Dexie {
   events!: Table<ProvenanceEvent, string>;
   vectors!: Table<Vector, string>;
   dismissals!: Table<Dismissal, string>;
+  outbox!: Table<OutboxOp, string>;
 
   constructor() {
     super("loam");
@@ -59,6 +61,16 @@ export class LoamDB extends Dexie {
             n.linkMeta = n.linkMeta ?? [];
           })
       );
+    // v5: offline outbox — Cadence writes queued while the server is
+    // unreachable (plane mode / server down), flushed on reconnect.
+    this.version(5).stores({
+      notes: "id, zid, title, type, status, folderId, updatedAt, archivedAt, *tags, *links",
+      folders: "id, parentId, order, archivedAt",
+      events: "id, noteId, ts, kind, [noteId+ts]",
+      vectors: "id, model",
+      dismissals: "key",
+      outbox: "id, ts",
+    });
   }
 }
 

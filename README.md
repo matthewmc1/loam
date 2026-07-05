@@ -65,6 +65,13 @@ Everything lives on your device (IndexedDB). No account, no server, no sync-to-c
 - **Command palette** (`⌘K`) — fuzzy search, or create on the spot.
 - **Archive & reset** — soft-delete that preserves full history; restore anytime, or
   reset the vault to the starter set from the sidebar footer.
+- **Works offline** — Loam installs as a PWA: the whole app shell (and fonts) are
+  cached by a service worker, so it opens on a plane even when hosted remotely.
+  Cadence tasks created or completed while the server is unreachable **queue in a
+  local outbox and sync automatically** the moment it answers again.
+- **Backup you own** — one-click **export of the entire vault** (notes, folders,
+  links, full provenance) to a JSON file, and import to restore it anywhere.
+  Persistent-storage protection is requested from the browser on first launch.
 
 ## Stack
 
@@ -132,6 +139,13 @@ loop between thinking and doing.
 Loam talks to Cadence over its REST API (`/api/v1/*`, Bearer token) — the same API the
 Cadence web app uses, scoped to your tenant by the token.
 
+**Offline** — reachability is probed by trying, never by `navigator.onLine` (which
+lies on planes, where a localhost Cadence works fine). If the server doesn't answer,
+Loam flips to an *offline* state: task creates and completions queue in an IndexedDB
+outbox, render immediately with a `queued ↺` marker, survive reloads, and flush in
+order the moment Cadence is reachable — via the OS online event, a background retry
+loop, or a manual retry.
+
 **Over MCP (for AI assistants)**
 
 A `.mcp.json` in this repo registers the [Cadence MCP server](../cadence/mcp) so an
@@ -147,6 +161,20 @@ assistant (Claude Code, etc.) can manage your board directly — `whats_next`,
 > The token in `.mcp.json` is a local secret. This repo isn't under git; if you later
 > initialize one, add `.mcp.json` to `.gitignore` (or switch to a `${CADENCE_API_TOKEN}`
 > env reference) before committing.
+
+## Offline, persistence & security
+
+- **App shell**: `vite-plugin-pwa` precaches the build (JS/CSS/HTML/icons) and
+  runtime-caches Google Fonts and the ONNX wasm, so a previously-visited Loam loads
+  with zero network — including when it's hosted on a remote origin.
+- **Data**: everything lives in IndexedDB on-device. `navigator.storage.persist()`
+  is requested at boot to shield the vault from storage-pressure eviction (the
+  footer tooltip shows whether the browser granted it). Export/import gives you a
+  file-based backup that survives profile resets and machine moves.
+- **Security**: a CSP locks scripts to the app's own origin (plus wasm for the
+  local AI runtimes) and blocks plugins/base hijacking. The Cadence token stays in
+  `localStorage`, is never exported in backups, and no note content leaves the
+  device — AI included.
 
 ## Architecture
 

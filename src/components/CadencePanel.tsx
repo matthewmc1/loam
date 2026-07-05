@@ -7,6 +7,7 @@ const STATE_COLOR: Record<string, string> = {
   off: "var(--text-fainter)",
   checking: "var(--status-review)",
   connected: "var(--status-verified)",
+  offline: "var(--status-review)",
   error: "var(--danger)",
 };
 
@@ -65,6 +66,19 @@ export function CadencePanel() {
                 ))}
               </div>
             </div>
+          ) : s.status === "offline" ? (
+            <div style={connectedBox}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Offline</span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                  {s.queued > 0 ? `${s.queued} change${s.queued > 1 ? "s" : ""} queued` : "retrying in the background"}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-600)", lineHeight: 1.5 }}>
+                Cadence isn't answering. Keep working — tasks you create or complete are stored
+                locally and sync automatically the moment it's reachable again.
+              </div>
+            </div>
           ) : (
             <p style={desc}>
               Connect Loam to your local Cadence workspace. Tasks you create from notes appear on your
@@ -88,7 +102,13 @@ export function CadencePanel() {
 
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
             <button style={primaryBtn} disabled={s.status === "checking"} onClick={() => void s.configure(url, token)}>
-              {s.status === "checking" ? "Connecting…" : s.status === "connected" ? "Reconnect" : "Connect"}
+              {s.status === "checking"
+                ? "Connecting…"
+                : s.status === "connected"
+                  ? "Reconnect"
+                  : s.status === "offline"
+                    ? "Retry now"
+                    : "Connect"}
             </button>
             {s.status === "connected" && (
               <button style={ghostBtn} onClick={() => void s.refresh()}>

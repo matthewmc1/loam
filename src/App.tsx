@@ -33,8 +33,9 @@ export function App() {
     void useAi.getState().loadVectors();
   }, []);
 
-  // auto-connect to Cadence if a token was saved
+  // load queued offline work, then auto-connect to Cadence if a token was saved
   useEffect(() => {
+    void useCadence.getState().init();
     if (useCadence.getState().token) void useCadence.getState().connect();
   }, []);
 

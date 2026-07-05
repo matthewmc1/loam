@@ -31,7 +31,7 @@ import { Editor } from "./editor/Editor";
 import { Inspector } from "./Inspector";
 
 export function NoteView({ vault, noteId }: { vault: Vault; noteId: string | null }) {
-  const { inspectorOpen, toggleInspector, open } = useUI();
+  const { inspectorOpen, toggleInspector, open, vaultEpoch } = useUI();
   const note = vault.notes.find((n) => n.id === noteId && !n.archivedAt);
 
   if (!note) {
@@ -100,7 +100,8 @@ export function NoteView({ vault, noteId }: { vault: Vault; noteId: string | nul
               </div>
             )}
 
-            <Editor key={note.id} note={note} notes={vault.notes} />
+            {/* epoch in the key: a vault restore remounts the editor on the new content */}
+            <Editor key={`${note.id}:${vaultEpoch}`} note={note} notes={vault.notes} />
 
             {note.pendingLinks.length > 0 && (
               <PendingLinks note={note} />
@@ -470,7 +471,8 @@ function NoteTasks({ note }: { note: Note }) {
   const tasks = useCadence((s) => s.tasks);
   const setTaskStatus = useCadence((s) => s.setTaskStatus);
 
-  if (status !== "connected") return null;
+  // offline still shows tasks — including the ones queued to sync
+  if (status !== "connected" && status !== "offline") return null;
   const mine = tasks.filter((t) => taskNoteId(t) === note.id);
   if (mine.length === 0) return null;
   const open = mine.filter((t) => t.status !== "done").length;
@@ -519,18 +521,25 @@ function NoteTasks({ note }: { note: Note }) {
                 {t.title}
               </span>
               <span
+                title={t.pending ? "Stored locally — will sync to Cadence when it's reachable" : undefined}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 5,
                   fontFamily: "var(--font-mono)",
                   fontSize: 10.5,
-                  color: "var(--text-faint)",
+                  color: t.pending ? "var(--status-review)" : "var(--text-faint)",
                   flexShrink: 0,
                 }}
               >
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: STAGE_COLOR[t.status] }} />
-                {STAGE_LABEL[t.status]}
+                <span
+                  style={
+                    t.pending
+                      ? { width: 5, height: 5, borderRadius: "50%", border: `1px dashed ${STAGE_COLOR[t.status]}` }
+                      : { width: 5, height: 5, borderRadius: "50%", background: STAGE_COLOR[t.status] }
+                  }
+                />
+                {t.pending ? `${STAGE_LABEL[t.status]} · queued ↺` : STAGE_LABEL[t.status]}
               </span>
             </div>
           );

@@ -6,6 +6,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import type { Note } from "../../db/types";
 import { STATUS_COLOR } from "../../db/types";
 import { saveDoc, logEvent } from "../../store/notes";
+import { useUI } from "../../store/ui";
 import { useCadence } from "../../cadence/store";
 import { loamNoteUrl } from "../../cadence/config";
 import type { PMNode } from "../../lib/doc";
@@ -19,9 +20,17 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
   notesRef.current = notes;
   const pending = useRef<PMNode | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  // if the vault was replaced (import/restore) after this editor mounted, its
+  // buffered content is pre-restore data — flushing it would overwrite the
+  // freshly restored note
+  const mountEpoch = useRef(useUI.getState().vaultEpoch);
 
   const flush = () => {
     if (timer.current) window.clearTimeout(timer.current);
+    if (useUI.getState().vaultEpoch !== mountEpoch.current) {
+      pending.current = null;
+      return;
+    }
     if (pending.current) {
       void saveDoc(note.id, pending.current);
       pending.current = null;
@@ -71,7 +80,8 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
     const text = editor.state.doc.textBetween(from, to, " ").trim();
     if (!text) return;
     const cad = useCadence.getState();
-    if (cad.status !== "connected") {
+    // offline still works — the store queues the create in the outbox
+    if (cad.status !== "connected" && cad.status !== "offline") {
       cad.setPanel(true);
       return;
     }
@@ -90,9 +100,9 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
     });
     if (task) {
       void logEvent(note.id, "task_created", `task created in Cadence: “${title}”`, {
-        data: { taskId: task.id },
+        data: { taskId: task.id, ...(task.pending ? { queued: true } : {}) },
       });
-      setFlash("Added to Cadence ✓");
+      setFlash(task.pending ? "Queued — will sync ↺" : "Added to Cadence ✓");
     } else {
       const m = useCadence.getState().msg;
       setFlash(m ? `✕ ${m.slice(0, 48)}` : "Couldn’t add — check Cadence");

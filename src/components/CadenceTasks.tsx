@@ -11,12 +11,15 @@ const PER_STAGE = 6;
 export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
   const status = useCadence((s) => s.status);
   const tasks = useCadence((s) => s.tasks);
+  const queued = useCadence((s) => s.queued);
   const setPanel = useCadence((s) => s.setPanel);
   const refresh = useCadence((s) => s.refresh);
+  const connect = useCadence((s) => s.connect);
   const { open: openNote } = useUI();
   const [open, setOpen] = useState(true);
 
-  const connected = status === "connected";
+  // offline shows the same list (queued creates included) — it just can't sync yet
+  const connected = status === "connected" || status === "offline";
   // tasks point back at their source note via a loam:// link
   const noteById = new Map(notes.filter((n) => !n.archivedAt).map((n) => [n.id, n]));
 
@@ -30,7 +33,12 @@ export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
         </button>
         <div style={{ display: "flex", gap: 2 }}>
           {connected && (
-            <button style={miniBtn} className="rw" title="Refresh tasks" onClick={() => void refresh()}>
+            <button
+              style={miniBtn}
+              className="rw"
+              title={status === "offline" ? "Retry connection" : "Refresh tasks"}
+              onClick={() => void (status === "offline" ? connect() : refresh())}
+            >
               ↻
             </button>
           )}
@@ -42,6 +50,11 @@ export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
 
       {open && (
         <div style={{ padding: "2px 4px 4px" }}>
+          {status === "offline" && (
+            <div style={offlineNote}>
+              offline · {queued > 0 ? `${queued} queued — will sync` : "will reconnect"}
+            </div>
+          )}
           {!connected ? (
             <button style={connectBtn} className="rw" onClick={() => setPanel(true)}>
               {status === "checking" ? "Connecting to Cadence…" : status === "error" ? "Reconnect Cadence" : "Connect Cadence →"}
@@ -63,7 +76,13 @@ export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
                     const src = noteById.get(taskNoteId(t) ?? "");
                     return (
                       <div key={t.id} style={{ ...taskRow, flexWrap: "wrap" }} title={t.note || t.title}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: st.color, flexShrink: 0, opacity: t.status === "done" ? 0.5 : 1 }} />
+                        <span
+                          style={
+                            t.pending
+                              ? { width: 5, height: 5, borderRadius: "50%", border: `1px dashed ${st.color}`, flexShrink: 0 }
+                              : { width: 5, height: 5, borderRadius: "50%", background: st.color, flexShrink: 0, opacity: t.status === "done" ? 0.5 : 1 }
+                          }
+                        />
                         <span
                           style={{
                             flex: 1,
@@ -77,6 +96,11 @@ export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
                         >
                           {t.title}
                         </span>
+                        {t.pending && (
+                          <span style={queuedBadge} title="Waiting to sync to Cadence">
+                            ↺
+                          </span>
+                        )}
                         {src && (
                           <button
                             className="rw"
@@ -108,7 +132,7 @@ export function CadenceTasks({ notes = [] }: { notes?: Note[] }) {
 function dotColor(status: string): string {
   return status === "connected"
     ? "var(--status-verified)"
-    : status === "checking"
+    : status === "checking" || status === "offline"
       ? "var(--status-review)"
       : status === "error"
         ? "var(--danger)"
@@ -170,6 +194,18 @@ const stageHead: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
   color: "var(--text-600)",
+};
+const offlineNote: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 10.5,
+  color: "var(--status-review)",
+  padding: "2px 8px 6px",
+};
+const queuedBadge: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  color: "var(--status-review)",
+  flexShrink: 0,
 };
 const srcChip: React.CSSProperties = {
   flexBasis: "100%",

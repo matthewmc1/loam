@@ -8,6 +8,7 @@ import {
 } from "../store/selectors";
 import { createNote, createFolder, renameFolder } from "../store/notes";
 import { resetVault } from "../db/seed";
+import { exportVault, parseBackup, restoreBackup } from "../lib/backup";
 import { useAi } from "../ai/store";
 import { CadenceTasks } from "./CadenceTasks";
 import { STATUS_COLOR } from "../db/types";
@@ -63,6 +64,31 @@ export function Sidebar({ vault }: { vault: Vault }) {
     if (!ok) return;
     await resetVault();
     await useAi.getState().loadVectors();
+  }
+
+  // vault backup: export is one click; import replaces after an explicit confirm
+  const importInput = useRef<HTMLInputElement>(null);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  useEffect(() => {
+    void navigator.storage?.persisted?.().then(setPersisted);
+  }, []);
+
+  async function handleImport(file: File) {
+    try {
+      const backup = parseBackup(await file.text());
+      const when = backup.exportedAt ? new Date(backup.exportedAt).toLocaleString() : "unknown date";
+      const ok = window.confirm(
+        `Restore vault from this export (${backup.notes.length} notes, saved ${when})?\n\nThis replaces everything currently in Loam on this device.`
+      );
+      if (!ok) return;
+      // invalidate open editors BEFORE touching the db — their buffered
+      // (pre-restore) content must never flush over the restored vault
+      useUI.getState().bumpVaultEpoch();
+      await restoreBackup(backup);
+      await useAi.getState().loadVectors();
+    } catch (e) {
+      window.alert(`Couldn't restore: ${(e as Error).message}`);
+    }
   }
 
   return (
@@ -179,11 +205,42 @@ export function Sidebar({ vault }: { vault: Vault }) {
           style={footer}
           className="rw"
           onClick={() => setView("archive")}
-          title="Local-first — your notes never leave this device"
+          title={`Local-first — your notes never leave this device.${
+            persisted == null ? "" : persisted ? " Storage: persistent (protected from eviction)." : " Storage: best-effort — export a backup now and then."
+          }`}
         >
           <span style={liveDot} className="pulse-dot" />
           <span>Local · {vault.notes.filter((n) => !n.archivedAt).length} notes</span>
         </button>
+        <button
+          style={footerGear}
+          className="rw"
+          onClick={() => void exportVault()}
+          title="Export vault — download all notes, links, and history as JSON"
+          aria-label="Export vault"
+        >
+          ↓
+        </button>
+        <button
+          style={footerGear}
+          className="rw"
+          onClick={() => importInput.current?.click()}
+          title="Import vault — restore from an exported JSON file"
+          aria-label="Import vault"
+        >
+          ↑
+        </button>
+        <input
+          ref={importInput}
+          type="file"
+          accept="application/json,.json"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) void handleImport(f);
+          }}
+        />
         <button
           style={footerGear}
           className="rw"

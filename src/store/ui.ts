@@ -10,6 +10,12 @@ interface UIState {
   searchOpen: boolean;
   /** folder to drop new notes into when created from the global "New" button */
   draftFolderId: string | null;
+  /**
+   * Bumped when the vault is replaced wholesale (import/restore). Editors key
+   * on it so stale instances remount instead of flushing pre-restore content
+   * over the restored data.
+   */
+  vaultEpoch: number;
 
   open(noteId: string): void;
   setView(view: View): void;
@@ -17,6 +23,7 @@ interface UIState {
   setInspector(open: boolean): void;
   setSearchOpen(open: boolean): void;
   setDraftFolder(id: string | null): void;
+  bumpVaultEpoch(): void;
 }
 
 export const useUI = create<UIState>()(
@@ -27,8 +34,10 @@ export const useUI = create<UIState>()(
       inspectorOpen: true,
       searchOpen: false,
       draftFolderId: null,
+      vaultEpoch: 0,
 
       open: (noteId) => set({ view: "note", noteId }),
+      bumpVaultEpoch: () => set((s) => ({ vaultEpoch: s.vaultEpoch + 1 })),
       setView: (view) => set({ view }),
       toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
       setInspector: (open) => set({ inspectorOpen: open }),

@@ -18,6 +18,8 @@ export interface CadenceTask {
   scheduledAt?: string | null;
   links?: CadenceLink[];
   version?: number;
+  /** true = not yet synced to Cadence (queued in the offline outbox) */
+  pending?: boolean;
 }
 
 export interface CadenceUser {
