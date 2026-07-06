@@ -27,6 +27,7 @@ import {
   linkNotes,
   unlinkNotes,
   archiveNote,
+  deleteNoteForever,
   resolveContradiction,
 } from "../store/notes";
 import {
@@ -339,7 +340,7 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
       </div>
 
       {/* archive — soft-delete; the full history survives */}
-      <div style={{ padding: "0 12px 26px" }}>
+      <div style={{ padding: "0 12px 26px", display: "flex", flexDirection: "column", gap: 8 }}>
         <button
           style={archiveBtn}
           className="rw"
@@ -347,6 +348,20 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
           onClick={() => void archiveNote(note.id)}
         >
           Archive note
+        </button>
+        <button
+          style={deleteBtn}
+          className="rw"
+          title="Erase this note and its entire history — cannot be undone"
+          onClick={() => {
+            const ok = window.confirm(
+              `Delete “${note.title}” forever?\n\nThis erases the note AND its full provenance history. ` +
+                `Wikilinks pointing here become pending mentions. This cannot be undone — Archive is the reversible option.`
+            );
+            if (ok) void deleteNoteForever(note.id);
+          }}
+        >
+          Delete forever…
         </button>
       </div>
 
@@ -1027,6 +1042,11 @@ const archiveBtn: React.CSSProperties = {
   fontSize: 11.5,
   cursor: "pointer",
   fontFamily: "var(--font-sans)",
+};
+const deleteBtn: React.CSSProperties = {
+  ...archiveBtn,
+  borderColor: "color-mix(in srgb, var(--danger) 45%, transparent)",
+  color: "var(--danger)",
 };
 const historyBtn: React.CSSProperties = {
   marginTop: 8,

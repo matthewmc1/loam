@@ -480,6 +480,13 @@ export function seedIfEmpty(): Promise<void> {
   return seeding;
 }
 
+/**
+ * Set once the vault has ever held notes. Its presence means an empty vault
+ * is a *choice* (the user deleted everything) — the samples must not
+ * resurrect on the next launch.
+ */
+const SEEDED_FLAG = "loam-seeded";
+
 /** Wipe every table and reseed from the sample data. Destructive. */
 export async function resetVault(): Promise<void> {
   await db.transaction("rw", db.folders, db.notes, db.events, db.vectors, db.dismissals, async () => {
@@ -492,6 +499,7 @@ export async function resetVault(): Promise<void> {
   // clear any persisted AI flags so the fresh vault starts clean
   try {
     localStorage.removeItem("loam-ai-embed");
+    localStorage.removeItem(SEEDED_FLAG); // an explicit reset DOES want the samples back
   } catch {
     /* ignore */
   }
@@ -501,7 +509,19 @@ export async function resetVault(): Promise<void> {
 
 async function doSeed(): Promise<void> {
   const count = await db.notes.count();
-  if (count > 0) return;
+  if (count > 0) {
+    try {
+      localStorage.setItem(SEEDED_FLAG, "1");
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  try {
+    if (localStorage.getItem(SEEDED_FLAG)) return; // deliberately emptied — stay empty
+  } catch {
+    /* ignore */
+  }
 
   const now = Date.now();
 
@@ -583,6 +603,11 @@ async function doSeed(): Promise<void> {
     await db.notes.bulkAdd(notes);
     await db.events.bulkAdd(events);
   });
+  try {
+    localStorage.setItem(SEEDED_FLAG, "1");
+  } catch {
+    /* ignore */
+  }
 }
 
 function zidFromDate(d: Date): string {

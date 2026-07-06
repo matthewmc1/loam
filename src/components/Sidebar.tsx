@@ -6,7 +6,7 @@ import {
   unfiledNotes,
   type FolderNode,
 } from "../store/selectors";
-import { createNote, createFolder, renameFolder } from "../store/notes";
+import { createNote, createFolder, renameFolder, archiveNote } from "../store/notes";
 import { resetVault } from "../db/seed";
 import { exportVault, parseBackup, restoreBackup } from "../lib/backup";
 import { useAi } from "../ai/store";
@@ -419,31 +419,59 @@ function NoteRow({
   onOpen: (id: string) => void;
 }) {
   return (
-    <button
-      className="rw"
-      onClick={() => onOpen(note.id)}
+    <div
+      className="rw loam-noterow"
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 9,
-        width: "100%",
-        padding: "6px 8px",
-        paddingLeft: 14 + depth * 12,
-        border: "none",
         borderRadius: 6,
-        cursor: "pointer",
-        fontSize: 12.5,
-        color: active ? "var(--text-strong)" : "var(--text-600)",
-        fontWeight: active ? 600 : 400,
-        fontFamily: "var(--font-sans)",
         background: active ? "var(--active-row)" : "transparent",
       }}
     >
-      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: STATUS_COLOR[note.status] }} />
-      <span style={{ flex: 1, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {note.title}
-      </span>
-    </button>
+      <button
+        onClick={() => onOpen(note.id)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 9,
+          flex: 1,
+          minWidth: 0,
+          padding: "6px 8px",
+          paddingLeft: 14 + depth * 12,
+          border: "none",
+          borderRadius: 6,
+          cursor: "pointer",
+          fontSize: 12.5,
+          color: active ? "var(--text-strong)" : "var(--text-600)",
+          fontWeight: active ? 600 : 400,
+          fontFamily: "var(--font-sans)",
+          background: "none",
+        }}
+      >
+        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: STATUS_COLOR[note.status] }} />
+        <span style={{ flex: 1, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {note.title}
+        </span>
+      </button>
+      <button
+        className="loam-note-x"
+        title={`Archive “${note.title}” — restore anytime from Archive`}
+        aria-label={`Archive ${note.title}`}
+        onClick={() => void archiveNote(note.id)}
+        style={{
+          border: "none",
+          background: "none",
+          cursor: "pointer",
+          color: "var(--text-fainter)",
+          fontSize: 13,
+          lineHeight: 1,
+          padding: "4px 8px 4px 2px",
+          flexShrink: 0,
+        }}
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
