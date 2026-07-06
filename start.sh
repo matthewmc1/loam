@@ -16,10 +16,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-CADENCE_DIR="${CADENCE_DIR:-$HOME/cadence}"
+CADENCE_DIR="${CADENCE_DIR:-${HOME:-~}/cadence}"
 CADENCE_URL="${CADENCE_URL:-http://localhost:8088}"
 WITH_CADENCE=1 MODE=dev MINT=0 CHECK=0
-for arg in "$@"; do
+# ${1+"$@"} not "$@": bash < 4.4 under `set -u` reports an empty "$@" as an
+# unbound variable, so a flagless `./start.sh` would die on older bashes
+for arg in ${1+"$@"}; do
   case "$arg" in
     --no-cadence) WITH_CADENCE=0 ;;
     --preview)    MODE=preview ;;
