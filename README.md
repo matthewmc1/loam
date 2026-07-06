@@ -86,12 +86,36 @@ Everything lives on your device (IndexedDB). No account, no server, no sync-to-c
 - Zustand for ephemeral UI state
 - Geist + JetBrains Mono
 
-## Run
+## Quick start
+
+```bash
+git clone https://github.com/matthewmc1/loam.git && cd loam
+./start.sh
+```
+
+One command: installs dependencies, starts [Cadence](#cadence-integration) if it's
+on your machine (and mints you an API token when it does — Cadence's dev backend is
+in-memory, so tokens don't survive its restarts), then opens Loam at
+**http://localhost:5189**. Loam runs fine without Cadence — the integration just
+stays dormant until you connect it.
+
+```bash
+./start.sh --no-cadence   # just Loam
+./start.sh --preview      # production build at :4173 — visit once, then try it offline
+./start.sh --token        # re-mint a Cadence dev token (e.g. after restarting Cadence)
+./start.sh --check        # verify the setup without launching anything
+```
+
+Useful env vars: `CADENCE_DIR` (default `~/cadence`), `CADENCE_URL` (default
+`http://localhost:8088`), `LOAM_EMAIL` (identity for the dev token — defaults to
+your git email).
+
+Manual equivalent:
 
 ```bash
 npm install
 npm run dev      # http://localhost:5189
-npm run build    # typecheck + production build
+npm run build    # typecheck + production build (PWA)
 npm run typecheck
 ```
 
