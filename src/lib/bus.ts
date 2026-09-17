@@ -47,3 +47,18 @@ export const linkBus = {
     };
   },
 };
+
+/** One-line, transient messages for the person (a failed image, a full disk). */
+const noticeHandlers = new Set<(msg: string) => void>();
+
+export const noticeBus = {
+  emit(msg: string) {
+    noticeHandlers.forEach((h) => h(msg));
+  },
+  on(h: (msg: string) => void) {
+    noticeHandlers.add(h);
+    return () => {
+      noticeHandlers.delete(h);
+    };
+  },
+};

@@ -15,14 +15,25 @@ import { ArchiveView } from "./components/views/ArchiveView";
 import { CommandPalette } from "./components/CommandPalette";
 import { AiPanel } from "./components/AiPanel";
 import { CadencePanel } from "./components/CadencePanel";
+import { Notices } from "./components/Notices";
+import { sweepAssets } from "./lib/assets";
+import { useViewport } from "./lib/useViewport";
+import { SearchIcon } from "./components/icons";
 
 export function App() {
   const vault = useVault();
-  const { view, noteId, open, setSearchOpen } = useUI();
+  const { view, noteId, open, setSearchOpen, sidebarDrawer, setSidebarDrawer } = useUI();
+  const narrow = useViewport() === "narrow";
 
   // one-time local seed
   useEffect(() => {
     void seedIfEmpty();
+  }, []);
+
+  // images nothing references any more (removed from a note over a day ago)
+  useEffect(() => {
+    const t = window.setTimeout(() => void sweepAssets(), 8000);
+    return () => window.clearTimeout(t);
   }, []);
 
   // load cached embeddings (and auto-resume the model if it was enabled)
@@ -77,6 +88,18 @@ export function App() {
     };
   }, [open, setSearchOpen]);
 
+  // Escape puts a drawer away (the scrim does the same for pointers)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const ui = useUI.getState();
+      if (ui.sidebarDrawer) ui.setSidebarDrawer(false);
+      else if (ui.inspectorDrawer) ui.setInspectorDrawer(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // global ⌘K
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -105,9 +128,23 @@ export function App() {
   }, [view, activeId, noteId, open]);
 
   return (
-    <div style={shell}>
+    <div style={shell} className={"loam-shell" + (sidebarDrawer ? " sidebar-open" : "")}>
       <Sidebar vault={vault} />
-      <main style={main}>
+      {narrow && sidebarDrawer && <div className="loam-scrim" onClick={() => setSidebarDrawer(false)} aria-hidden />}
+      <main style={main} className="loam-main">
+        {narrow && (
+          <header className="loam-topbar">
+            <button type="button" aria-label="Open navigation" aria-expanded={sidebarDrawer} onClick={() => setSidebarDrawer(true)}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M3 5.5h12M3 9h12M3 12.5h12" />
+              </svg>
+            </button>
+            <span className="loam-topbar-title">Loam</span>
+            <button type="button" aria-label="Search notes" onClick={() => setSearchOpen(true)}>
+              <SearchIcon size={16} />
+            </button>
+          </header>
+        )}
         {view === "note" && <NoteView vault={vault} noteId={activeId} />}
         {view === "resurface" && <ResurfaceView vault={vault} />}
         {view === "ask" && <AskView vault={vault} />}
@@ -116,6 +153,7 @@ export function App() {
       <CommandPalette vault={vault} />
       <AiPanel vault={vault} />
       <CadencePanel />
+      <Notices />
     </div>
   );
 }
@@ -133,6 +171,7 @@ const shell: React.CSSProperties = {
 const main: React.CSSProperties = {
   flex: 1,
   display: "flex",
+  flexDirection: "column",
   minWidth: 0,
   background: "var(--bg-main)",
 };

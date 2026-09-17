@@ -134,3 +134,156 @@ button:focus:not(:focus-visible) {
 .loam-noterow .loam-note-x:focus-visible {
   opacity: 1;
 }
+
+/* ======================================================================
+   Responsive layout — breakpoints mirror src/lib/useViewport.ts
+     wide ≥1100  ·  medium ≥760 (inspector is a drawer)  ·  narrow <760
+   ====================================================================== */
+
+.loam-main > * {
+  min-height: 0; /* column flex: let each view own its scrolling */
+}
+
+.loam-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--text-strong) 28%, transparent);
+  animation: fadeIn 0.18s var(--ease-out);
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes slideInRight {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+/* medium + narrow: the inspector slides over the note */
+@media (max-width: 1099.98px) {
+  .loam-inspector {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    width: min(340px, 88vw) !important;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: -18px 0 40px -24px rgba(27, 27, 24, 0.35);
+    animation: slideInRight 0.22s var(--ease-out);
+  }
+}
+
+/* narrow: the sidebar is a drawer too, and a slim bar stands in for it */
+@media (max-width: 759.98px) {
+  .loam-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 60;
+    width: min(300px, 86vw) !important;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    transform: translateX(-102%);
+    visibility: hidden;
+    transition: transform 0.24s var(--ease-out), visibility 0s linear 0.24s;
+    box-shadow: 18px 0 40px -24px rgba(27, 27, 24, 0.35);
+  }
+  .loam-shell.sidebar-open .loam-sidebar {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.24s var(--ease-out);
+  }
+
+  .loam-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: calc(48px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 6px 0;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+  }
+  .loam-topbar button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 9px;
+    color: var(--text-700);
+    cursor: pointer;
+  }
+  .loam-topbar button:active {
+    background: var(--hover-row);
+  }
+  .loam-topbar-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+
+  /* the page: tighter gutters, a title that fits, body text at 16px */
+  .loam-page {
+    padding: 26px 20px 120px !important;
+  }
+  .loam-page.has-hero {
+    padding-top: 22px !important;
+  }
+  .loam-viewpage {
+    padding: 28px 20px 60px !important;
+  }
+  .loam-title {
+    font-size: 26px !important;
+  }
+  .loam-prose {
+    font-size: 16px;
+  }
+  .loam-hero {
+    height: clamp(130px, 24vh, 220px);
+  }
+}
+
+/* touch: nothing may hide behind :hover, and targets get room */
+@media (hover: none) {
+  .folder-add,
+  .loam-tag .loam-tag-x,
+  .loam-noterow .loam-note-x {
+    opacity: 1;
+  }
+  .folder-row:hover .folder-count {
+    opacity: 1;
+  }
+  .loam-noterow,
+  .folder-row {
+    min-height: 36px;
+  }
+  /* iOS zooms the page when a focused field's text is under 16px */
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+  .loam-title {
+    font-size: 26px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

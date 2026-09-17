@@ -35,7 +35,10 @@ export function makeSuggestion(opts: {
         if (!container || !rect) return;
         const margin = 6;
         const top = rect.bottom + margin;
-        container.style.left = `${Math.round(rect.left)}px`;
+        // the list is 290px wide (× the UI scale) — don't let it run off a narrow screen
+        const scale = Number(getComputedStyle(document.documentElement).getPropertyValue("--ui-scale")) || 1;
+        const maxLeft = window.innerWidth - 290 * scale - 8;
+        container.style.left = `${Math.round(Math.max(8, Math.min(rect.left, maxLeft)))}px`;
         // keep within viewport vertically
         const maxTop = window.innerHeight - 300;
         container.style.top = `${Math.round(Math.min(top, maxTop))}px`;

@@ -100,7 +100,7 @@ export function AskView({ vault }: { vault: Vault }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <div style={{ flex: 1, overflowY: "auto" }}>
-        <div style={page}>
+        <div style={page} className="loam-viewpage">
           <div className="uno" style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 8 }}>
             <span>Ask · across {notes.length} notes</span>
             <span style={{ color: "var(--border-strong)" }}>·</span>

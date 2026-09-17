@@ -42,7 +42,7 @@ export function ResurfaceView({ vault }: { vault: Vault }) {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
-      <div style={page}>
+      <div style={page} className="loam-viewpage">
         <h1 style={h1}>Resurface</h1>
         <p style={sub}>
           Notes drifting, due for review, or worth reconnecting — knowledge kept alive.

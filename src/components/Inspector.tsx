@@ -90,7 +90,7 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
     .sort((a, b) => a.title.localeCompare(b.title));
 
   return (
-    <aside style={aside}>
+    <aside style={aside} className="loam-inspector" aria-label="Note details">
       {/* properties */}
       <SectionLabel>Properties</SectionLabel>
       <div style={{ padding: "0 12px 12px" }}>

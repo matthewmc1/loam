@@ -8,13 +8,14 @@ import type { Editor, JSONContent, Range } from "@tiptap/core";
 import { uid } from "../../lib/id";
 import { linkBus } from "../../lib/bus";
 import { useUI } from "../../store/ui";
+import { insertImages, pickImages } from "./Image";
 
 export interface BlockDef {
   id: string;
   label: string;
   /** one-line description shown beside the label */
   hint: string;
-  group: "Link" | "Structure" | "Template" | "Go";
+  group: "Link" | "Media" | "Structure" | "Template" | "Go";
   /** extra words the filter should match */
   keywords?: string;
   /** `range` covers the typed "/query" — every block starts by replacing it */
@@ -75,6 +76,17 @@ export const BLOCKS: BlockDef[] = [
     group: "Link",
     keywords: "hashtag topic",
     run: (editor, range) => void editor.chain().focus().insertContentAt(range, "#").run(),
+  },
+  {
+    id: "image",
+    label: "Image",
+    hint: "Or paste / drop one",
+    group: "Media",
+    keywords: "picture photo screenshot figure diagram upload",
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      void pickImages().then((files) => insertImages(editor, files));
+    },
   },
   {
     id: "decision",

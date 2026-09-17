@@ -17,6 +17,7 @@ export const EVENT_COLOR: Record<EventKind, string> = {
   ref_added: "var(--status-verified-soft)",
   ref_removed: "var(--text-fainter)",
   decision_changed: "var(--status-review)",
+  hero_changed: "var(--text-muted)",
   confidence_changed: "var(--text-muted)",
   review_changed: "var(--status-review)",
   reviewed: "var(--status-verified-soft)",

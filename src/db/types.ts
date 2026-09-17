@@ -77,6 +77,26 @@ export interface ExternalRef {
   addedAt: number;
 }
 
+/**
+ * An image (or, later, any file) stored in the vault. Bytes live here, once;
+ * notes point at them by id — so a doc stays small, text search never wades
+ * through base64, and the same picture pasted twice is stored once (by hash).
+ */
+export interface Asset {
+  id: string;
+  /** sha-256 of `data`, for dedupe */
+  hash: string;
+  mime: string;
+  /** original filename, when there was one */
+  name: string;
+  /** ArrayBuffer, not Blob — Blobs in IndexedDB are unreliable on Safari */
+  data: ArrayBuffer;
+  width: number;
+  height: number;
+  size: number;
+  createdAt: number;
+}
+
 /** Preset spaced-review intervals offered in the inspector, in days. */
 export const REVIEW_INTERVALS = [7, 30, 90, 180] as const;
 
@@ -108,6 +128,11 @@ export interface Note {
   linkMeta: LinkMeta[];
   /** Alternate titles this note answers to — used for unlinked-mention scanning. */
   aliases: string[];
+
+  /** Cover image shown above the title. An id in the `assets` table. */
+  heroAssetId: string | null;
+  /** Vertical focal point of the hero crop, 0–100 (%). */
+  heroPosition: number;
 
   /** External sources & material attached to this note (not in the prose). */
   refs: ExternalRef[];
@@ -189,6 +214,7 @@ export type EventKind =
   | "ref_added"
   | "ref_removed"
   | "decision_changed"
+  | "hero_changed"
   | "confidence_changed"
   | "review_changed"
   | "reviewed"

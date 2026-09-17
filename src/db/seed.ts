@@ -492,7 +492,8 @@ const SEEDED_FLAG = "loam-seeded";
 
 /** Wipe every table and reseed from the sample data. Destructive. */
 export async function resetVault(): Promise<void> {
-  await db.transaction("rw", db.folders, db.notes, db.events, db.vectors, db.dismissals, async () => {
+  await db.transaction("rw", [db.folders, db.notes, db.events, db.vectors, db.dismissals, db.assets], async () => {
+    await db.assets.clear();
     await db.notes.clear();
     await db.folders.clear();
     await db.events.clear();
@@ -567,6 +568,8 @@ async function doSeed(): Promise<void> {
       linkMeta: [],
       aliases: [],
       refs: (s.refs ?? []).map((r, i) => ({ id: `${s.id}_ref${i}`, ...r, addedAt: createdAt })),
+      heroAssetId: null,
+      heroPosition: 50,
       source: s.source,
       confidence: s.conf,
       reviewCadence: s.review,

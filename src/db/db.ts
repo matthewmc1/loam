@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { Note, Folder, ProvenanceEvent, Vector, Dismissal } from "./types";
+import type { Note, Folder, ProvenanceEvent, Vector, Dismissal, Asset } from "./types";
 import type { OutboxOp } from "../cadence/outbox";
 import { cadenceDays } from "../lib/time";
 
@@ -15,6 +15,7 @@ export class LoamDB extends Dexie {
   vectors!: Table<Vector, string>;
   dismissals!: Table<Dismissal, string>;
   outbox!: Table<OutboxOp, string>;
+  assets!: Table<Asset, string>;
 
   constructor() {
     super("loam");
@@ -81,6 +82,19 @@ export class LoamDB extends Dexie {
           .toCollection()
           .modify((n: Note) => {
             n.refs = n.refs ?? [];
+          })
+      );
+    // v7: images. Bytes live in `assets`; notes reference them by id (inline
+    // image nodes in the doc, and an optional hero).
+    this.version(7)
+      .stores({ assets: "id, hash, createdAt" })
+      .upgrade((tx) =>
+        tx
+          .table("notes")
+          .toCollection()
+          .modify((n: Note) => {
+            n.heroAssetId = n.heroAssetId ?? null;
+            n.heroPosition = n.heroPosition ?? 50;
           })
       );
   }

@@ -454,3 +454,193 @@
   line-height: 1.55;
   color: var(--text-700);
 }
+
+/* ------------------------------- images --------------------------------- */
+.loam-figure {
+  margin: 1.8em 0;
+  max-width: 100%;
+}
+/* "wide" breaks out of the reading measure to the width of the title column */
+.loam-figure[data-size="wide"] {
+  width: calc(var(--editor-max) - 80px);
+  max-width: none;
+}
+/* …unless the column is too narrow to have anywhere to break out to */
+@container (max-width: 700px) {
+  .loam-figure[data-size="wide"] {
+    width: 100%;
+  }
+}
+.loam-figure-frame {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--bg-input);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.14s var(--ease);
+  /* tall screenshots shouldn't take over the page */
+  max-height: 80vh;
+}
+.loam-figure.is-selected .loam-figure-frame {
+  outline-color: color-mix(in srgb, var(--text-strong) 55%, transparent);
+}
+.loam-figure-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.loam-figure-empty {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  color: var(--text-fainter);
+}
+.loam-figure-tools,
+.loam-hero-tools {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-strong) 88%, transparent);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.14s var(--ease);
+}
+.loam-figure:hover .loam-figure-tools,
+.loam-figure.is-selected .loam-figure-tools,
+.loam-figure-tools:focus-within,
+.loam-hero:hover .loam-hero-tools,
+.loam-hero.is-moving .loam-hero-tools,
+.loam-hero-tools:focus-within {
+  opacity: 1;
+}
+.loam-figure-tools button,
+.loam-hero-tools button {
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 9px;
+  color: var(--bg-main);
+  font: 500 12px var(--font-sans);
+  cursor: pointer;
+}
+.loam-figure-tools button:hover,
+.loam-hero-tools button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.loam-hero-tools button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.loam-figure-caption {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  outline: none;
+  background: none;
+  text-align: center;
+  font: 13px/1.5 var(--font-sans);
+  color: var(--text-muted);
+}
+.loam-figure-caption::placeholder {
+  color: transparent;
+}
+.loam-figure:hover .loam-figure-caption::placeholder,
+.loam-figure.is-selected .loam-figure-caption::placeholder,
+.loam-figure-caption:focus::placeholder {
+  color: var(--text-ghost);
+}
+
+/* -------------------------------- hero ---------------------------------- */
+.loam-canvas {
+  container-type: inline-size;
+}
+.loam-hero {
+  position: relative;
+  height: clamp(150px, 30vh, 340px);
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.loam-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+.loam-hero.is-moving img {
+  cursor: grab;
+  touch-action: none;
+}
+.loam-hero.is-moving img:active {
+  cursor: grabbing;
+}
+.loam-hero.is-over::after {
+  content: "Drop to replace cover";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--text-strong) 55%, transparent);
+  color: var(--bg-main);
+  font-size: 13px;
+}
+.loam-hero-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  color: var(--text-fainter);
+}
+.loam-hero-hint {
+  padding: 0 8px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--bg-main) 80%, transparent);
+}
+/* with a cover, the title sits closer to it */
+.loam-page.has-hero {
+  padding-top: 34px !important;
+}
+.loam-hero-add {
+  display: block;
+  margin: -22px 0 8px -8px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: 12px var(--font-sans);
+  color: var(--text-ghost);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.14s var(--ease), color 0.14s var(--ease), background 0.14s var(--ease);
+}
+.loam-page:hover .loam-hero-add,
+.loam-hero-add:focus-visible {
+  opacity: 1;
+}
+.loam-hero-add:hover {
+  color: var(--text-600);
+  background: var(--hover-prop);
+}
+/* no hover on touch: controls are simply there */
+@media (hover: none) {
+  .loam-hero-add,
+  .loam-figure-tools,
+  .loam-hero-tools {
+    opacity: 1;
+  }
+  .loam-figure-caption::placeholder {
+    color: var(--text-ghost);
+  }
+}

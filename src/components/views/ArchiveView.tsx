@@ -12,7 +12,7 @@ export function ArchiveView({ vault }: { vault: Vault }) {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
-      <div style={page}>
+      <div style={page} className="loam-viewpage">
         <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 4 }}>
           Archive
         </h1>

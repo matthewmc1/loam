@@ -16,6 +16,7 @@ import { makeSuggestion } from "./suggestion";
 import { EditorBubble } from "./EditorBubble";
 import { Decision } from "./Decision";
 import { InsertMenu } from "./InsertMenu";
+import { LoamImage, insertImages } from "./Image";
 import { normalizeUrl } from "../../lib/url";
 import type { SuggestionItem } from "./SuggestionList";
 import "./editor.css";
@@ -52,6 +53,9 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
     }
   };
 
+  // editorProps callbacks are created before `editor` exists
+  const editorRef = useRef<TiptapEditor | null>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
@@ -71,6 +75,7 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
       }),
       Decision.configure({ noteId: note.id }),
       InsertMenu,
+      LoamImage,
       WikiLink.configure({
         suggestion: makeSuggestion({
           char: "[[",
@@ -100,6 +105,21 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
     autofocus: note.text.trim() === "" ? "end" : false,
     editorProps: {
       attributes: { class: "ProseMirror", spellcheck: "true" },
+      // images arrive by paste (screenshots) and by drop (files) — stored in the
+      // vault's asset table, referenced from the doc by id
+      handlePaste: (_view, e) => {
+        const files = e.clipboardData?.files;
+        if (!files?.length || !editorRef.current) return false;
+        return insertImages(editorRef.current, files);
+      },
+      handleDrop: (view, e, _slice, moved) => {
+        const files = (e as DragEvent).dataTransfer?.files;
+        if (moved || !files?.length || !editorRef.current) return false;
+        const at = view.posAtCoords({ left: (e as DragEvent).clientX, top: (e as DragEvent).clientY })?.pos;
+        const handled = insertImages(editorRef.current, files, at);
+        if (handled) e.preventDefault();
+        return handled;
+      },
       handleDOMEvents: {
         click: (_view, e) => {
           const a = (e.target as HTMLElement).closest?.("a.loam-extlink");
@@ -118,6 +138,8 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
       timer.current = window.setTimeout(flush, 600);
     },
   });
+
+  editorRef.current = editor;
 
   useEffect(() => {
     if (unreadable && editor && !editor.isDestroyed) editor.setEditable(false);

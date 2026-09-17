@@ -91,7 +91,7 @@ export function Sidebar({ vault }: { vault: Vault }) {
   }
 
   return (
-    <aside style={aside}>
+    <aside style={aside} className="loam-sidebar">
       {/* brand + nav */}
       <div style={brandRow}>
         <div style={logoMark}>

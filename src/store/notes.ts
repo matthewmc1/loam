@@ -134,6 +134,8 @@ export async function createNote(input: CreateNoteInput = {}): Promise<string> {
     linkMeta: [],
     aliases: [],
     refs: [],
+    heroAssetId: null,
+    heroPosition: 50,
     source: input.source ?? (type === "Fleeting" ? "—" : "own"),
     confidence: 0.2,
     reviewCadence: "—",
@@ -297,6 +299,19 @@ export async function removeRef(id: string, refId: string): Promise<void> {
   if (!note || !ref) return;
   await db.notes.update(id, { refs: note.refs.filter((r) => r.id !== refId), updatedAt: Date.now() });
   await logEvent(id, "ref_removed", `source removed: ${ref.title || urlLabel(ref.url)}`, { data: { url: ref.url } });
+}
+
+/** Set, replace or (null) remove the note's hero image. */
+export async function setHero(id: string, assetId: string | null): Promise<void> {
+  const note = await db.notes.get(id);
+  if (!note || note.heroAssetId === assetId) return;
+  await db.notes.update(id, { heroAssetId: assetId, heroPosition: 50, updatedAt: Date.now() });
+  await logEvent(id, "hero_changed", assetId ? (note.heroAssetId ? "cover image changed" : "cover image added") : "cover image removed");
+}
+
+/** Vertical focal point of the hero crop, 0–100. Not worth a provenance event. */
+export async function setHeroPosition(id: string, position: number): Promise<void> {
+  await db.notes.update(id, { heroPosition: Math.max(0, Math.min(100, Math.round(position))) });
 }
 
 export async function setConfidence(id: string, confidence: number): Promise<void> {

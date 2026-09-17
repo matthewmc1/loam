@@ -29,9 +29,16 @@ import { InspectorIcon, CheckIcon } from "./icons";
 import { Menu, MenuItem } from "./ui/Menu";
 import { Editor } from "./editor/Editor";
 import { Inspector } from "./Inspector";
+import { Hero, AddHero } from "./Hero";
+import { useViewport } from "../lib/useViewport";
 
 export function NoteView({ vault, noteId }: { vault: Vault; noteId: string | null }) {
-  const { inspectorOpen, toggleInspector, open, vaultEpoch } = useUI();
+  const ui = useUI();
+  const { open, vaultEpoch } = ui;
+  // beside the note when there's room; otherwise a drawer that starts closed
+  const asDrawer = useViewport() !== "wide";
+  const inspectorOpen = asDrawer ? ui.inspectorDrawer : ui.inspectorOpen;
+  const toggleInspector = asDrawer ? () => ui.setInspectorDrawer(!ui.inspectorDrawer) : ui.toggleInspector;
   const note = vault.notes.find((n) => n.id === noteId && !n.archivedAt);
 
   if (!note) {
@@ -81,9 +88,12 @@ export function NoteView({ vault, noteId }: { vault: Vault; noteId: string | nul
         </div>
 
         {/* canvas */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          <div style={page} className="loam-page">
+        <div style={{ flex: 1, overflowY: "auto" }} className="loam-canvas">
+          <Hero key={note.id} note={note} />
+          <div style={page} className={"loam-page" + (note.heroAssetId ? " has-hero" : "")}>
             {isFresh && <TypePicker note={note} />}
+
+            <AddHero note={note} />
 
             <TitleInput note={note} />
 
@@ -150,6 +160,9 @@ export function NoteView({ vault, noteId }: { vault: Vault; noteId: string | nul
         </div>
       </div>
 
+      {inspectorOpen && asDrawer && (
+        <div className="loam-scrim" onClick={() => ui.setInspectorDrawer(false)} aria-hidden />
+      )}
       {inspectorOpen && <Inspector key={note.id} note={note} vault={vault} />}
     </div>
   );
@@ -198,6 +211,7 @@ function TitleInput({ note }: { note: Note }) {
           ref.current?.blur();
         }
       }}
+      className="loam-title"
       style={titleStyle(value.trim() === "")}
     />
   );

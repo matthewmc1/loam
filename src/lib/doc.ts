@@ -33,6 +33,8 @@ export function docToText(doc: PMNode | unknown): string {
     if (n.type === "text" && n.text) out.push(n.text);
     else if (n.type === "wikiLink" && n.attrs?.title) out.push(String(n.attrs.title));
     else if (n.type === "tag" && n.attrs?.name) out.push("#" + String(n.attrs.name));
+    // a caption is the only text an image has — keep it findable
+    else if (n.type === "image" && n.attrs?.caption) out.push(String(n.attrs.caption));
   });
   // join blocks with spaces; collapse runs of whitespace
   return out.join(" ").replace(/\s+/g, " ").trim();
@@ -148,6 +150,10 @@ function blocksToMd(blocks: PMNode[] | undefined, lines: string[]): void {
         break;
       case "codeBlock":
         lines.push("```", inlineToMd(block.content), "```");
+        break;
+      case "image":
+        // bytes live in the asset store; an exporter writes them to assets/<id>
+        lines.push(`![${String(block.attrs?.caption ?? "")}](assets/${String(block.attrs?.assetId ?? "")})`);
         break;
       case "horizontalRule":
         lines.push("---");

@@ -25,6 +25,25 @@ Everything lives on your device (IndexedDB). No account, no server, no sync-to-c
 - **Notes** with a rich Tiptap editor: headings, quotes, lists, code, and inline
   `[[wikilinks]]` + `#tags` with live autocomplete. Links that don't resolve yet
   become "unlinked mentions" you can turn into notes in one click.
+- **External links & sources** — URLs link themselves as you type or paste; select
+  text and **Link** it, or pick *External link* from the insert menu. The inspector's
+  **Sources** section lists references you attach by hand alongside every link found
+  in the prose. Only `http(s)` and `mailto` addresses are ever accepted.
+- **Insert menu** — type `/`, or press `⌘K` inside a note (`⌘K` twice = search), to
+  drop in a note link, external link, tag, image, **Decision**, or a template
+  (open questions, literature summary, meeting notes). It's driven by one block
+  registry — the foundation for user-authored templates.
+- **Decisions** — a structured block with a status (*open → decided → reversed*) and
+  a date. Status changes land in the note's provenance; Markdown export renders it
+  as a quoted callout.
+- **Images** — paste, drop, or insert. Bytes are stored **once** in the vault's own
+  asset table (deduplicated by hash, downscaled to 2400px / WebP when that saves
+  space) and referenced from notes by id — never inlined as data URLs. Any note can
+  carry a **cover image** with a draggable focal point. Images travel inside vault
+  backups; unreferenced ones are swept a day after they're orphaned.
+- **Works at every width** — three columns on a desktop, inspector-as-drawer on a
+  tablet, a single column with slide-over navigation on a phone; the whole UI scales
+  up on very large displays.
 - **Metadata you can edit** in the inspector: type, status, source, confidence,
   review interval, verified/reviewed dates, aliases, the Zettelkasten id, and
   arbitrary custom properties. Every edit is logged to provenance.
