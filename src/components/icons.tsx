@@ -4,17 +4,6 @@ interface IconProps {
   size?: number;
 }
 
-export function GraphIcon({ size = 17 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 17 17" fill="none" stroke="currentColor" strokeWidth={1.4}>
-      <circle cx="4" cy="4.3" r="2" />
-      <circle cx="13" cy="6" r="2" />
-      <circle cx="7.5" cy="13" r="2" />
-      <path d="M5.9 4.7 11 5.6M5.2 6 7 11M9 12 11.6 7.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function CadenceIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round">

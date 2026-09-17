@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor as TiptapEditor, Range, JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Link from "@tiptap/extension-link";
 import type { Note } from "../../db/types";
 import { STATUS_COLOR } from "../../db/types";
 import { saveDoc, logEvent } from "../../store/notes";
@@ -12,6 +13,10 @@ import { loamNoteUrl } from "../../cadence/config";
 import type { PMNode } from "../../lib/doc";
 import { WikiLink, Tag } from "./extensions";
 import { makeSuggestion } from "./suggestion";
+import { EditorBubble } from "./EditorBubble";
+import { Decision } from "./Decision";
+import { InsertMenu } from "./InsertMenu";
+import { normalizeUrl } from "../../lib/url";
 import type { SuggestionItem } from "./SuggestionList";
 import "./editor.css";
 
@@ -25,8 +30,18 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
   // freshly restored note
   const mountEpoch = useRef(useUI.getState().vaultEpoch);
 
+  // Set when the stored doc doesn't fit this build's schema (a newer Loam wrote
+  // a block this one doesn't know — e.g. a stale cached PWA). Tiptap then loads
+  // a blank doc; saving that would erase the note, so this editor never saves.
+  const [unreadable, setUnreadable] = useState(false);
+  const unreadableRef = useRef(false);
+
   const flush = () => {
     if (timer.current) window.clearTimeout(timer.current);
+    if (unreadableRef.current) {
+      pending.current = null;
+      return;
+    }
     if (useUI.getState().vaultEpoch !== mountEpoch.current) {
       pending.current = null;
       return;
@@ -41,8 +56,21 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Placeholder.configure({
-        placeholder: "Start writing — type [[ to link a note, # to tag…",
+        placeholder: "Start writing — [[ links a note, # tags, / or ⌘K inserts…",
       }),
+      // external links: typed/pasted URLs link themselves; pasting a URL over a
+      // selection links the selection. Clicking only places the caret (this is
+      // an editor) — the bubble, or ⌘/ctrl-click, opens it.
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        defaultProtocol: "https",
+        HTMLAttributes: { target: "_blank", rel: "noopener noreferrer nofollow", class: "loam-extlink" },
+        isAllowedUri: (url) => normalizeUrl(url) != null,
+      }),
+      Decision.configure({ noteId: note.id }),
+      InsertMenu,
       WikiLink.configure({
         suggestion: makeSuggestion({
           char: "[[",
@@ -61,16 +89,39 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
       }),
     ],
     content: note.doc as JSONContent,
+    enableContentCheck: true,
+    onContentError: ({ error }) => {
+      console.error("[loam] note content doesn't match this version's schema — editor locked", error);
+      // the ref blocks saving immediately; the rest waits, because this fires
+      // mid-construction (no view yet, and we're inside React's render)
+      unreadableRef.current = true;
+      queueMicrotask(() => setUnreadable(true));
+    },
     autofocus: note.text.trim() === "" ? "end" : false,
     editorProps: {
       attributes: { class: "ProseMirror", spellcheck: "true" },
+      handleDOMEvents: {
+        click: (_view, e) => {
+          const a = (e.target as HTMLElement).closest?.("a.loam-extlink");
+          if (!a) return false;
+          e.preventDefault(); // never navigate this tab away from the vault
+          const href = normalizeUrl(a.getAttribute("href") ?? "");
+          if (href && (e.metaKey || e.ctrlKey)) window.open(href, "_blank", "noopener,noreferrer");
+          return false;
+        },
+      },
     },
     onUpdate: ({ editor }) => {
+      if (unreadableRef.current) return;
       pending.current = editor.getJSON() as PMNode;
       if (timer.current) window.clearTimeout(timer.current);
       timer.current = window.setTimeout(flush, 600);
     },
   });
+
+  useEffect(() => {
+    if (unreadable && editor && !editor.isDestroyed) editor.setEditable(false);
+  }, [unreadable, editor]);
 
   // selection → Cadence task
   const [flash, setFlash] = useState<string | null>(null);
@@ -121,29 +172,20 @@ export function Editor({ note, notes }: { note: Note; notes: Note[] }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="loam-prose">
-      {editor && (
-        <BubbleMenu
-          editor={editor}
-          tippyOptions={{ duration: 100 }}
-          shouldShow={({ state }) => {
-            const { from, to } = state.selection;
-            return to > from && state.doc.textBetween(from, to, " ").trim().length > 0;
-          }}
-        >
-          <button
-            className="loam-bubble"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              void makeTask();
-            }}
-          >
-            {flash ?? "→ Cadence task"}
-          </button>
-        </BubbleMenu>
+    <>
+      {/* kept outside .loam-prose: the bubble menu detaches its node from that
+          div, so React can't safely insert a new sibling in front of it */}
+      {unreadable && (
+        <div className="loam-unreadable" role="alert">
+          This note uses something this version of Loam can’t display, so editing is locked to keep it
+          intact. Reload to update Loam — your note is untouched.
+        </div>
       )}
-      <EditorContent editor={editor} />
-    </div>
+      <div className="loam-prose">
+        {editor && <EditorBubble editor={editor} taskLabel={flash} onMakeTask={() => void makeTask()} />}
+        <EditorContent editor={editor} />
+      </div>
+    </>
   );
 }
 

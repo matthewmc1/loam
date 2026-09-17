@@ -14,7 +14,6 @@ import { CadenceTasks } from "./CadenceTasks";
 import { STATUS_COLOR } from "../db/types";
 import type { Note } from "../db/types";
 import {
-  GraphIcon,
   ResurfaceIcon,
   AskIcon,
   AiIcon,
@@ -102,9 +101,6 @@ export function Sidebar({ vault }: { vault: Vault }) {
           Loam
         </span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-          <NavBtn active={navActive("graph")} title="Graph" onClick={() => setView("graph")}>
-            <GraphIcon />
-          </NavBtn>
           <NavBtn active={navActive("resurface")} title="Resurface" onClick={() => setView("resurface")}>
             <ResurfaceIcon />
           </NavBtn>

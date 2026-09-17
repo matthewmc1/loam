@@ -64,6 +64,19 @@ export interface LinkMeta {
   origin: "user" | "ai" | "suggestion" | "resurface" | "mention";
 }
 
+/**
+ * A pointer out of the vault — the article, paper, video or doc a note draws
+ * on. Links written in the prose are discovered from the body; these are the
+ * ones attached deliberately, with a name of their own.
+ */
+export interface ExternalRef {
+  id: string;
+  url: string;
+  /** what to call it; empty = show a label derived from the URL */
+  title: string;
+  addedAt: number;
+}
+
 /** Preset spaced-review intervals offered in the inspector, in days. */
 export const REVIEW_INTERVALS = [7, 30, 90, 180] as const;
 
@@ -95,6 +108,9 @@ export interface Note {
   linkMeta: LinkMeta[];
   /** Alternate titles this note answers to — used for unlinked-mention scanning. */
   aliases: string[];
+
+  /** External sources & material attached to this note (not in the prose). */
+  refs: ExternalRef[];
 
   /** Where the knowledge came from: a book, an interview, a feed clipping, own. */
   source: string;
@@ -170,6 +186,9 @@ export type EventKind =
   | "untagged"
   | "moved"
   | "source_changed"
+  | "ref_added"
+  | "ref_removed"
+  | "decision_changed"
   | "confidence_changed"
   | "review_changed"
   | "reviewed"
@@ -209,7 +228,7 @@ export interface Dismissal {
 }
 
 /** The view currently shown in <main>. */
-export type View = "note" | "graph" | "resurface" | "ask" | "archive";
+export type View = "note" | "resurface" | "ask" | "archive";
 
 /** Static maps shared across UI for status presentation. */
 export const STATUS_COLOR: Record<NoteStatus, string> = {

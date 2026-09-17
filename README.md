@@ -48,9 +48,6 @@ Everything lives on your device (IndexedDB). No account, no server, no sync-to-c
   Map of Content. Dismissals persist.
 - **Ask** — semantic retrieval across your notes (local embeddings) synthesized by a
   local LLM, with cited sources.
-- **Graph** — force-directed view of the link graph (node size = inbound links),
-  filterable by type, status, tag, and folder; dashed edges show AI semantic
-  similarity.
 - **Local AI** — everything runs on your device. Embeddings (MiniLM via
   Transformers.js) power semantic suggestions, edges, and Ask; generation (Gemma)
   drives concept/relation analysis and contradiction detection. Pick your backend in
@@ -117,16 +114,18 @@ npm install
 npm run dev      # http://localhost:5189
 npm run build    # typecheck + production build (PWA)
 npm run typecheck
+npm test         # data-layer tests (Vitest + fake-indexeddb)
+npm run check    # everything CI runs: typecheck, tests, production build
 ```
 
-On first launch the vault seeds itself with a small interlinked starter set so the
-graph, backlinks, and resurfacing have something to show.
+On first launch the vault seeds itself with a small interlinked starter set so
+backlinks, connections, and resurfacing have something to show.
 
 ## Local AI
 
 All AI runs **on your machine** — nothing is sent to a cloud API.
 
-- **Embeddings** (semantic suggestions, graph edges, Ask retrieval) use
+- **Embeddings** (semantic suggestions, Ask retrieval) use
   `all-MiniLM-L6-v2` via Transformers.js in a Web Worker. They download once and
   cache; notes are embedded in the background.
 - **Generation** (concept/relation analysis, contradiction detection, Ask synthesis)
@@ -217,7 +216,7 @@ src/
                  CadenceTasks, icons
     editor/      Tiptap editor, wikilink/tag extensions, suggestion popup,
                  selection → Cadence task bubble menu
-    views/       Resurface, Ask, Graph, Archive
+    views/       Resurface, Ask, Archive
   styles/        tokens.css (design tokens), global.css
 ```
 
@@ -230,6 +229,7 @@ provenance.
 - Optional vault-on-disk sync via the File System Access API (notes as `.md` +
   YAML frontmatter)
 - Drag-to-reorder / drag-to-move in the folder tree
-- Graph focus mode and time-scrubbing of how the graph grew
+- Bring the graph back *embedded* — a local neighbourhood map inside the note
+  inspector rather than a standalone view (the full-page graph was removed)
 - Push Cadence-side completions into note provenance live (WebSocket), not just
   when completed from Loam

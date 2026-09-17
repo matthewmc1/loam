@@ -7,7 +7,7 @@
   --bg-app: #f4f4f1;        /* outermost canvas */
   --bg-sidebar: #fbfbf9;    /* left rail + inspector */
   --bg-main: #ffffff;       /* note canvas */
-  --bg-sunken: #fcfcfa;     /* graph canvas, cards */
+  --bg-sunken: #fcfcfa;     /* cards */
   --bg-input: #f1f1ec;      /* search, chips, type-picker track */
 
   /* Hover / active states */
@@ -75,6 +75,13 @@
   --r-xl: 12px;
 
   /* Layout */
+  /*
+   * The UI is drawn at fixed px sizes for a ~1440px laptop. On larger displays
+   * the shell is zoomed as a whole (see App.tsx) so type, rails and the reading
+   * column grow together instead of floating in white space. Anything portalled
+   * to <body> must apply zoom: var(--ui-scale) itself.
+   */
+  --ui-scale: 1;
   --sidebar-w: 248px;
   --inspector-w: 288px;
   --editor-max: 680px;      /* title + meta width */
@@ -85,3 +92,10 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --live-ghost: rgba(62, 157, 110, 0.16);
 }
+
+@media (min-width: 1680px) { :root { --ui-scale: 1.1; } }
+@media (min-width: 1920px) { :root { --ui-scale: 1.2; } }
+@media (min-width: 2240px) { :root { --ui-scale: 1.35; } }
+@media (min-width: 2560px) { :root { --ui-scale: 1.5; } }
+@media (min-width: 3200px) { :root { --ui-scale: 1.8; } }
+@media (min-width: 3840px) { :root { --ui-scale: 2.1; } }

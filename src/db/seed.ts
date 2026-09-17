@@ -40,6 +40,8 @@ interface SeedNote {
   out: string[];
   blocks: SeedBlock[];
   history: { when: string; what: string }[];
+  /** external sources attached to the note */
+  refs?: { url: string; title: string }[];
 }
 
 const T = (t: string): SeedSpan => ({ t });
@@ -222,6 +224,7 @@ const SEED: SeedNote[] = [
   {
     id: "ahrens",
     title: "Ahrens — How to Take Smart Notes",
+    refs: [{ url: "https://www.soenkeahrens.de/en/takesmartnotes", title: "How to Take Smart Notes — Sönke Ahrens" }],
     type: "Literature",
     folder: "Literature",
     status: "verified",
@@ -563,6 +566,7 @@ async function doSeed(): Promise<void> {
       manualLinks: [],
       linkMeta: [],
       aliases: [],
+      refs: (s.refs ?? []).map((r, i) => ({ id: `${s.id}_ref${i}`, ...r, addedAt: createdAt })),
       source: s.source,
       confidence: s.conf,
       reviewCadence: s.review,

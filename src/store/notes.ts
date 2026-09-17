@@ -9,8 +9,10 @@ import type {
   NoteProperty,
   LinkType,
   LinkMeta,
+  ExternalRef,
 } from "../db/types";
 import { uid, zid } from "../lib/id";
+import { normalizeUrl, urlKey, urlLabel } from "../lib/url";
 import { emptyDoc, docToText, extractTags, type PMNode } from "../lib/doc";
 
 /* ----------------------------- provenance ------------------------------- */
@@ -131,6 +133,7 @@ export async function createNote(input: CreateNoteInput = {}): Promise<string> {
     manualLinks: [],
     linkMeta: [],
     aliases: [],
+    refs: [],
     source: input.source ?? (type === "Fleeting" ? "—" : "own"),
     confidence: 0.2,
     reviewCadence: "—",
@@ -261,6 +264,39 @@ export async function verifyNote(id: string): Promise<void> {
 export async function setSource(id: string, source: string): Promise<void> {
   await db.notes.update(id, { source, updatedAt: Date.now() });
   await logEvent(id, "source_changed", `source → ${source || "—"}`);
+}
+
+/**
+ * Attach an external source to a note. Returns false when the URL isn't a
+ * usable web/mail address or the note already carries it.
+ */
+export async function addRef(id: string, rawUrl: string, title = ""): Promise<boolean> {
+  const url = normalizeUrl(rawUrl);
+  const note = await db.notes.get(id);
+  if (!url || !note) return false;
+  const refs = note.refs ?? [];
+  if (refs.some((r) => urlKey(r.url) === urlKey(url))) return false;
+  const ref: ExternalRef = { id: uid("ref"), url, title: title.trim(), addedAt: Date.now() };
+  await db.notes.update(id, { refs: [...refs, ref], updatedAt: Date.now() });
+  await logEvent(id, "ref_added", `source added: ${ref.title || urlLabel(url)}`, { data: { url } });
+  return true;
+}
+
+export async function renameRef(id: string, refId: string, title: string): Promise<void> {
+  const note = await db.notes.get(id);
+  if (!note) return;
+  await db.notes.update(id, {
+    refs: (note.refs ?? []).map((r) => (r.id === refId ? { ...r, title: title.trim() } : r)),
+    updatedAt: Date.now(),
+  });
+}
+
+export async function removeRef(id: string, refId: string): Promise<void> {
+  const note = await db.notes.get(id);
+  const ref = note?.refs?.find((r) => r.id === refId);
+  if (!note || !ref) return;
+  await db.notes.update(id, { refs: note.refs.filter((r) => r.id !== refId), updatedAt: Date.now() });
+  await logEvent(id, "ref_removed", `source removed: ${ref.title || urlLabel(ref.url)}`, { data: { url: ref.url } });
 }
 
 export async function setConfidence(id: string, confidence: number): Promise<void> {

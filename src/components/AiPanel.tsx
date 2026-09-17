@@ -77,7 +77,7 @@ export function AiPanel({ vault }: { vault: Vault }) {
           >
             <p style={desc}>
               Vectorizes notes on-device (~25&nbsp;MB model) to power semantic link suggestions and
-              graph edges. The foundation under every AI feature.
+              Ask. The foundation under every AI feature.
             </p>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button style={primaryBtn} disabled={s.embed === "loading"} onClick={() => void s.enableEmbeddings()}>
@@ -85,7 +85,7 @@ export function AiPanel({ vault }: { vault: Vault }) {
               </button>
               {s.embed === "ready" && (
                 <span style={{ fontSize: 12, color: "var(--status-verified-soft)" }}>
-                  Suggestions &amp; graph edges are live.
+                  Suggestions &amp; Ask retrieval are live.
                 </span>
               )}
             </div>

@@ -11,7 +11,6 @@ import { Sidebar } from "./components/Sidebar";
 import { NoteView } from "./components/NoteView";
 import { ResurfaceView } from "./components/views/ResurfaceView";
 import { AskView } from "./components/views/AskView";
-import { GraphView } from "./components/views/GraphView";
 import { ArchiveView } from "./components/views/ArchiveView";
 import { CommandPalette } from "./components/CommandPalette";
 import { AiPanel } from "./components/AiPanel";
@@ -81,6 +80,9 @@ export function App() {
   // global ⌘K
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // inside a note ⌘K belongs to the editor (insert menu) — it claims the
+      // event with preventDefault before it bubbles up to here
+      if (e.defaultPrevented) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSearchOpen(true);
@@ -107,7 +109,6 @@ export function App() {
       <Sidebar vault={vault} />
       <main style={main}>
         {view === "note" && <NoteView vault={vault} noteId={activeId} />}
-        {view === "graph" && <GraphView vault={vault} />}
         {view === "resurface" && <ResurfaceView vault={vault} />}
         {view === "ask" && <AskView vault={vault} />}
         {view === "archive" && <ArchiveView vault={vault} />}
@@ -121,7 +122,10 @@ export function App() {
 
 const shell: React.CSSProperties = {
   display: "flex",
-  height: "100vh",
+  // 100%, not 100vh: the shell is zoomed by --ui-scale on large screens, and
+  // zoom multiplies viewport units — a percentage still resolves to the real viewport
+  height: "100%",
+  zoom: "var(--ui-scale)",
   overflow: "hidden",
   background: "var(--bg-app)",
 };

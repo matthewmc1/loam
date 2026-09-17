@@ -8,6 +8,7 @@
  * the Cadence token is never included (it lives in localStorage, not here).
  */
 import { db } from "../db/db";
+import { cadenceDays } from "./time";
 import type { Note, Folder, ProvenanceEvent, Dismissal } from "../db/types";
 
 const FORMAT = "loam-vault";
@@ -47,6 +48,34 @@ export async function exportVault(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Bring a note from an older export up to the current shape. IndexedDB
+ * upgrades (db.ts) only run on data already in the database — a backup file
+ * taken before a field existed bypasses them, so restore fills the gaps here.
+ * Add a line whenever Note gains a required field.
+ */
+export function normalizeNote(raw: Note): Note {
+  const n = raw as Partial<Note> & Note;
+  return {
+    ...n,
+    tags: n.tags ?? [],
+    manualTags: n.manualTags ?? [],
+    links: n.links ?? [],
+    pendingLinks: n.pendingLinks ?? [],
+    manualLinks: n.manualLinks ?? [],
+    linkMeta: n.linkMeta ?? [],
+    aliases: n.aliases ?? [],
+    refs: n.refs ?? [],
+    properties: n.properties ?? [],
+    reviewCadence: n.reviewCadence ?? "—",
+    reviewInterval: n.reviewInterval ?? cadenceDays(n.reviewCadence ?? ""),
+    lastReviewedAt: n.lastReviewedAt ?? null,
+    snoozedUntil: n.snoozedUntil ?? null,
+    verifiedAt: n.verifiedAt ?? null,
+    archivedAt: n.archivedAt ?? null,
+  };
+}
+
 /** Parse + sanity-check a backup file. Throws with a human message if it isn't one. */
 export function parseBackup(text: string): VaultBackup {
   let data: unknown;
@@ -64,7 +93,7 @@ export function parseBackup(text: string): VaultBackup {
     format: FORMAT,
     version: b.version ?? 1,
     exportedAt: b.exportedAt ?? 0,
-    notes: b.notes as Note[],
+    notes: (b.notes as Note[]).map(normalizeNote),
     folders: b.folders as Folder[],
     events: (b.events ?? []) as ProvenanceEvent[],
     dismissals: (b.dismissals ?? []) as Dismissal[],

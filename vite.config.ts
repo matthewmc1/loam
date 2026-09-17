@@ -28,11 +28,12 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // the AI-heavy main chunk is ~6 MB — raise the precache ceiling so the
-        // whole shell (not just small assets) is available offline. The 24 MB
-        // ONNX wasm is deliberately NOT globbed: it runtime-caches on first use.
-        maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
+        // Precache only what Loam needs to boot. The local-AI runtimes (WebLLM
+        // ~6 MB + its worker, the embeddings worker, the 24 MB ONNX wasm) are
+        // opt-in features — they runtime-cache on first use (below) instead of
+        // costing every first visit ~12 MB.
         globPatterns: ["**/*.{js,css,html,svg,ico,webmanifest,woff2}"],
+        globIgnores: ["**/llm.worker-*.js", "**/embeddings.worker-*.js", "**/web-llm-*.js"],
         navigateFallback: "index.html",
         runtimeCaching: [
           // Google Fonts split across two origins: cache the CSS and the woff2
@@ -66,7 +67,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\/assets\/.*\.(mjs|wasm)$/i,
+            // …and this origin's own AI chunks excluded from the precache
+            urlPattern: /\/assets\/(.*\.(mjs|wasm)|(llm\.worker|embeddings\.worker|web-llm)-.*\.js)$/i,
             handler: "CacheFirst",
             options: {
               cacheName: "loam-wasm-local",
@@ -94,6 +96,8 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
+          // named so the service worker can keep it out of the precache
+          if (id.includes("@mlc-ai/web-llm")) return "web-llm";
           if (id.includes("@tiptap") || id.includes("prosemirror")) return "editor";
           if (id.includes("react") || id.includes("dexie") || id.includes("zustand"))
             return "vendor";

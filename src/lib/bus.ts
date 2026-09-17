@@ -32,3 +32,18 @@ export const tagBus = {
     };
   },
 };
+
+/** The insert menu asking the editor's link bubble to open at the caret. */
+const linkHandlers = new Set<() => void>();
+
+export const linkBus = {
+  emit() {
+    linkHandlers.forEach((h) => h());
+  },
+  on(h: () => void) {
+    linkHandlers.add(h);
+    return () => {
+      linkHandlers.delete(h);
+    };
+  },
+};

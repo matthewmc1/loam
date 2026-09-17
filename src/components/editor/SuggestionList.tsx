@@ -94,6 +94,8 @@ export const SuggestionList = forwardRef<SuggestionListHandle, Props>(
 SuggestionList.displayName = "SuggestionList";
 
 const wrap: React.CSSProperties = {
+  // mounted in <body>, outside the zoomed shell — match its scale
+  zoom: "var(--ui-scale)",
   display: "flex",
   flexDirection: "column",
   gap: 1,

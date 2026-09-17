@@ -71,7 +71,28 @@ export class LoamDB extends Dexie {
       dismissals: "key",
       outbox: "id, ts",
     });
+    // v6: external references (sources & material) attached to a note.
+    // No new index — the bump exists to backfill `refs` on existing notes.
+    this.version(6)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table("notes")
+          .toCollection()
+          .modify((n: Note) => {
+            n.refs = n.refs ?? [];
+          })
+      );
   }
 }
 
 export const db = new LoamDB();
+
+// A newer Loam opened in another tab wants to upgrade the schema. Holding the
+// connection would block that tab forever, so reload into the new version.
+// The reload itself releases the connection — closing first would make the
+// editor's beforeunload flush fail and drop the last keystrokes.
+db.on("versionchange", () => {
+  if (typeof location !== "undefined") location.reload();
+  else db.close();
+});

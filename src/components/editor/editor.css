@@ -159,11 +159,27 @@
   color: var(--text-body);
 }
 
+/* external links: an underline + ↗, so they never read as a [[wikilink]] pill */
 .loam-prose a {
   color: var(--text-strong);
   text-decoration: underline;
-  text-decoration-color: var(--link-border);
-  text-underline-offset: 2px;
+  text-decoration-color: var(--border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: text;
+  transition: text-decoration-color 0.16s var(--ease);
+}
+.loam-prose a:hover {
+  text-decoration-color: var(--text-600);
+}
+.loam-prose a.loam-extlink::after {
+  content: "↗";
+  font-size: 0.7em;
+  margin-left: 0.15em;
+  color: var(--text-fainter);
+  vertical-align: 0.25em;
+  text-decoration: none;
+  display: inline-block;
 }
 .loam-prose strong {
   font-weight: 600;
@@ -283,20 +299,158 @@
   color: var(--status-verified);
 }
 
-/* selection → Cadence task */
+/* selection bubble: link controls + Cadence task */
 .loam-bubble {
+  display: flex;
+  align-items: center;
+  gap: 1px;
   background: var(--text-strong);
   color: var(--bg-main);
-  border: none;
-  border-radius: 7px;
-  padding: 5px 11px;
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: 8px;
+  padding: 3px;
   font-family: var(--font-sans);
-  cursor: pointer;
   box-shadow: 0 6px 18px -6px rgba(27, 27, 24, 0.32);
   white-space: nowrap;
 }
-.loam-bubble:hover {
-  opacity: 0.92;
+.loam-bubble-btn {
+  background: none;
+  color: inherit;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 9px;
+  font: 500 12px var(--font-sans);
+  cursor: pointer;
+  text-decoration: none;
+}
+.loam-bubble-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.loam-bubble-url {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.loam-bubble-sep {
+  width: 1px;
+  height: 14px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+.loam-bubble-input {
+  width: 240px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font: 12px var(--font-mono);
+  outline: none;
+}
+.loam-bubble-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--font-sans);
+}
+.loam-bubble-input.is-bad {
+  border-color: var(--danger);
+}
+
+/* decision block — structured, so it reads as an object set into the prose */
+.loam-decision {
+  margin: 1.6em 0;
+  padding: 14px 18px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--status-review);
+  border-radius: var(--r-lg);
+  background: var(--bg-sunken);
+  transition: border-color 0.2s var(--ease);
+}
+.loam-decision[data-status="decided"] {
+  border-left-color: var(--status-verified);
+}
+.loam-decision[data-status="reversed"] {
+  border-left-color: var(--border-strong);
+}
+.loam-decision[data-status="reversed"] .loam-decision-body > :first-child {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-fainter);
+  color: var(--text-muted);
+}
+.loam-decision-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  user-select: none;
+}
+.loam-decision-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  border-radius: 20px;
+  padding: 2px 9px 2px 7px;
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  cursor: pointer;
+}
+.loam-decision-status:hover {
+  border-color: var(--border-strong);
+}
+.loam-decision-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.loam-decision-date {
+  margin-left: auto;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-fainter);
+}
+/* the first line is the decision itself */
+.loam-decision-body > :first-child {
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 0.4em;
+}
+.loam-decision-body > p:first-child:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: "What are we deciding?";
+  color: var(--text-ghost);
+  font-weight: 400;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.loam-decision-body h3 {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 1.3em 0 0.3em;
+}
+.loam-decision-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* schema mismatch guard — see Editor.tsx */
+.loam-unreadable {
+  margin-bottom: 1.2em;
+  padding: 10px 14px;
+  border: 1px solid var(--status-review);
+  border-radius: var(--r-lg);
+  background: var(--bg-sunken);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-700);
 }

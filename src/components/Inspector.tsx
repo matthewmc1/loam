@@ -44,6 +44,8 @@ import { relativeTime, shortDate } from "../lib/time";
 import { Menu, MenuItem } from "./ui/Menu";
 import { CloseIcon } from "./icons";
 import { EVENT_COLOR } from "./eventMeta";
+import { Sources, sourceCount as countSources } from "./Sources";
+import { isUrl, normalizeUrl } from "../lib/url";
 
 const PROV_LIMIT = 10;
 
@@ -172,7 +174,21 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
         </PropRow>
 
         <PropRow label="source">
-          <EditableText value={note.source} placeholder="—" onCommit={(v) => void setSource(note.id, v)} />
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <EditableText value={note.source} placeholder="—" onCommit={(v) => void setSource(note.id, v)} />
+            {isUrl(note.source) && (
+              <a
+                href={normalizeUrl(note.source) ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open source"
+                aria-label="Open source"
+                style={{ color: "var(--text-muted)", textDecoration: "none", fontSize: 13, flexShrink: 0 }}
+              >
+                ↗
+              </a>
+            )}
+          </span>
         </PropRow>
 
         <PropRow label="confidence">
@@ -251,6 +267,10 @@ export function Inspector({ note, vault }: { note: Note; vault: Vault }) {
         ))}
         <AddLink candidates={linkable} onLink={(id) => void linkNotes(note.id, id)} />
       </div>
+
+      {/* external sources & material */}
+      <SectionLabel>Sources · {countSources(note)}</SectionLabel>
+      <Sources note={note} />
 
       {/* AI */}
       <div style={aiHeader}>

@@ -70,6 +70,27 @@ export function extractTags(doc: PMNode | unknown): string[] {
   return tags;
 }
 
+export interface ProseLink {
+  url: string;
+  /** the linked words, as written */
+  text: string;
+}
+
+/** External links written into the prose (deduped by href, in order). */
+export function extractExternalLinks(doc: PMNode | unknown): ProseLink[] {
+  const byUrl = new Map<string, ProseLink>();
+  walk(doc as PMNode, (n) => {
+    if (n.type !== "text" || !n.text) return;
+    const href = n.marks?.find((m) => m.type === "link")?.attrs?.href;
+    if (typeof href !== "string" || !href) return;
+    const seen = byUrl.get(href);
+    // a link split across marks (bold inside it, say) arrives as adjacent text nodes
+    if (seen) seen.text += n.text;
+    else byUrl.set(href, { url: href, text: n.text });
+  });
+  return [...byUrl.values()];
+}
+
 /** First non-empty paragraph as an excerpt. */
 export function docExcerpt(doc: PMNode | unknown, max = 140): string {
   const text = docToText(doc);
@@ -87,6 +108,8 @@ function inlineToMd(nodes: PMNode[] | undefined): string {
           else if (m.type === "italic") t = `*${t}*`;
           else if (m.type === "code") t = `\`${t}\``;
         }
+        const href = n.marks?.find((m) => m.type === "link")?.attrs?.href;
+        if (typeof href === "string" && href) t = t === href ? `<${href}>` : `[${t}](${href})`;
         return t;
       }
       if (n.type === "wikiLink") return `[[${n.attrs?.title ?? ""}]]`;
@@ -97,11 +120,8 @@ function inlineToMd(nodes: PMNode[] | undefined): string {
     .join("");
 }
 
-/** Serialize a doc to portable Markdown (for export / file sync). */
-export function docToMarkdown(doc: PMNode | unknown): string {
-  const d = doc as PMNode;
-  const lines: string[] = [];
-  for (const block of d?.content ?? []) {
+function blocksToMd(blocks: PMNode[] | undefined, lines: string[]): void {
+  for (const block of blocks ?? []) {
     switch (block.type) {
       case "heading": {
         const level = Number(block.attrs?.level ?? 1);
@@ -129,10 +149,32 @@ export function docToMarkdown(doc: PMNode | unknown): string {
       case "codeBlock":
         lines.push("```", inlineToMd(block.content), "```");
         break;
+      case "horizontalRule":
+        lines.push("---");
+        break;
+      case "decision": {
+        // a quoted callout: survives any Markdown reader, and the first line
+        // carries the status so the log stays greppable outside Loam
+        const inner: string[] = [];
+        blocksToMd(block.content, inner);
+        const when = typeof block.attrs?.decidedAt === "number"
+          ? " · " + new Date(block.attrs.decidedAt).toISOString().slice(0, 10)
+          : "";
+        lines.push(`> **Decision — ${String(block.attrs?.status ?? "open")}${when}**`);
+        while (inner.length && inner[inner.length - 1] === "") inner.pop();
+        for (const l of inner) lines.push(l ? `> ${l}` : ">");
+        break;
+      }
       default:
         lines.push(inlineToMd(block.content));
     }
     lines.push("");
   }
+}
+
+/** Serialize a doc to portable Markdown (for export / file sync). */
+export function docToMarkdown(doc: PMNode | unknown): string {
+  const lines: string[] = [];
+  blocksToMd((doc as PMNode)?.content, lines);
   return lines.join("\n").trim() + "\n";
 }
