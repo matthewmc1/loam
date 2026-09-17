@@ -15,6 +15,7 @@ import { STATUS_COLOR } from "../db/types";
 import type { Note } from "../db/types";
 import {
   ResurfaceIcon,
+  TodayIcon,
   AskIcon,
   AiIcon,
   GearIcon,
@@ -101,6 +102,9 @@ export function Sidebar({ vault }: { vault: Vault }) {
           Loam
         </span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
+          <NavBtn active={navActive("today")} title="Today" onClick={() => setView("today")}>
+            <TodayIcon />
+          </NavBtn>
           <NavBtn active={navActive("resurface")} title="Resurface" onClick={() => setView("resurface")}>
             <ResurfaceIcon />
           </NavBtn>

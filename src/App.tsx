@@ -12,6 +12,7 @@ import { NoteView } from "./components/NoteView";
 import { ResurfaceView } from "./components/views/ResurfaceView";
 import { AskView } from "./components/views/AskView";
 import { ArchiveView } from "./components/views/ArchiveView";
+import { TodayView } from "./components/views/TodayView";
 import { CommandPalette } from "./components/CommandPalette";
 import { AiPanel } from "./components/AiPanel";
 import { CadencePanel } from "./components/CadencePanel";
@@ -145,6 +146,7 @@ export function App() {
             </button>
           </header>
         )}
+        {view === "today" && <TodayView vault={vault} />}
         {view === "note" && <NoteView vault={vault} noteId={activeId} />}
         {view === "resurface" && <ResurfaceView vault={vault} />}
         {view === "ask" && <AskView vault={vault} />}

@@ -254,7 +254,7 @@ export interface Dismissal {
 }
 
 /** The view currently shown in <main>. */
-export type View = "note" | "resurface" | "ask" | "archive";
+export type View = "today" | "note" | "resurface" | "ask" | "archive";
 
 /** Static maps shared across UI for status presentation. */
 export const STATUS_COLOR: Record<NoteStatus, string> = {

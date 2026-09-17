@@ -22,6 +22,11 @@ Everything lives on your device (IndexedDB). No account, no server, no sync-to-c
 
 ## Features
 
+- **Today** — the home screen. A **daily narrative** written from the provenance log
+  (*“Decided X in Y. Started 2 notes… Connected A → B.”* — deterministic, no model
+  needed, and it falls back to your last active day), a one-click **daily note**,
+  what's waiting on you, every **open decision** in the vault, Cadence tasks in
+  focus, and the notes in motion this week.
 - **Notes** with a rich Tiptap editor: headings, quotes, lists, code, and inline
   `[[wikilinks]]` + `#tags` with live autocomplete. Links that don't resolve yet
   become "unlinked mentions" you can turn into notes in one click.
@@ -235,7 +240,7 @@ src/
                  CadenceTasks, icons
     editor/      Tiptap editor, wikilink/tag extensions, suggestion popup,
                  selection → Cadence task bubble menu
-    views/       Resurface, Ask, Archive
+    views/       Today, Resurface, Ask, Archive
   styles/        tokens.css (design tokens), global.css
 ```
 

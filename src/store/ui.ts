@@ -34,7 +34,7 @@ interface UIState {
 export const useUI = create<UIState>()(
   persist(
     (set) => ({
-      view: "note",
+      view: "today",
       noteId: null,
       inspectorOpen: true,
       inspectorDrawer: false,

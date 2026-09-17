@@ -23,6 +23,15 @@ export function GearIcon({ size = 14 }: IconProps) {
   );
 }
 
+export function TodayIcon({ size = 17 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 17 17" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
+      <circle cx="8.5" cy="8.5" r="3" />
+      <path d="M8.5 1.8v1.6M8.5 13.6v1.6M1.8 8.5h1.6M13.6 8.5h1.6M3.8 3.8l1.1 1.1M12.1 12.1l1.1 1.1M3.8 13.2l1.1-1.1M12.1 4.9l1.1-1.1" />
+    </svg>
+  );
+}
+
 export function ResurfaceIcon({ size = 17 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 17 17" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
